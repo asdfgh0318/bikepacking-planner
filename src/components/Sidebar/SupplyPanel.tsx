@@ -5,6 +5,7 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }
   zabka: { icon: 'Ż', color: '#4ade80', label: 'Żabka' },
   biedronka: { icon: 'B', color: '#f87171', label: 'Biedronka' },
   shop: { icon: 'S', color: '#60a5fa', label: 'Shop' },
+  water: { icon: 'W', color: '#38bdf8', label: 'Water' },
 };
 
 export function SupplyPanel() {
@@ -90,6 +91,9 @@ export function SupplyPanel() {
                   <span className="supply-gap">+{pt.gapFromPrev.toFixed(1)} km</span>
                   {pt.details?.is24h && <span className="tag tag-24h">24/7</span>}
                 </div>
+                {pt.details?.waterType && (
+                  <div className="supply-item-address">{pt.details.waterType.replace('_', ' ')}</div>
+                )}
                 {pt.details?.address && (
                   <div className="supply-item-address">{pt.details.address}</div>
                 )}

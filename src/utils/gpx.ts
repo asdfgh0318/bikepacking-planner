@@ -53,3 +53,70 @@ export function readFileAsText(file: File): Promise<string> {
     reader.readAsText(file);
   });
 }
+
+/**
+ * Export route + supply points as GPX file.
+ */
+export function exportGPX(
+  routeName: string,
+  routeGeometry: GeoJSON.LineString,
+  supplyPoints?: { name: string; lat: number; lng: number; type: string; distanceFromStartKm: number }[]
+): string {
+  const now = new Date().toISOString();
+
+  let gpxStr = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Bikepacking Planner"
+  xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>${escapeXml(routeName)}</name>
+    <time>${now}</time>
+  </metadata>
+`;
+
+  // Add supply points as waypoints
+  if (supplyPoints) {
+    for (const sp of supplyPoints) {
+      gpxStr += `  <wpt lat="${sp.lat}" lon="${sp.lng}">
+    <name>${escapeXml(sp.name)}</name>
+    <desc>${escapeXml(sp.type)} at ${sp.distanceFromStartKm.toFixed(1)} km</desc>
+    <sym>${sp.type === 'water' ? 'Water Source' : sp.type === 'paczkomat' ? 'Box' : 'Shopping Center'}</sym>
+  </wpt>
+`;
+    }
+  }
+
+  // Add route as track
+  gpxStr += `  <trk>
+    <name>${escapeXml(routeName)}</name>
+    <trkseg>
+`;
+
+  for (const coord of routeGeometry.coordinates) {
+    const [lng, lat, ele] = coord;
+    if (ele != null) {
+      gpxStr += `      <trkpt lat="${lat}" lon="${lng}"><ele>${ele.toFixed(1)}</ele></trkpt>\n`;
+    } else {
+      gpxStr += `      <trkpt lat="${lat}" lon="${lng}"/>\n`;
+    }
+  }
+
+  gpxStr += `    </trkseg>
+  </trk>
+</gpx>`;
+
+  return gpxStr;
+}
+
+function escapeXml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export function downloadGPX(filename: string, gpxContent: string) {
+  const blob = new Blob([gpxContent], { type: 'application/gpx+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.gpx') ? filename : `${filename}.gpx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

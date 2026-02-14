@@ -6,7 +6,8 @@ import { useRouteStore } from './store/routeStore';
 import { useSupplyStore } from './store/supplyStore';
 import { calculateRoute } from './services/brouter';
 import { fetchPaczkomaty } from './services/inpost';
-import { fetchShopsNearBbox } from './services/overpass';
+import { fetchShopsNearBbox, fetchWaterSourcesNearBbox } from './services/overpass';
+import { splitRouteIntoDays } from './services/daySplitter';
 import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from './utils/geo';
 import type { SupplyPoint } from './types';
 
@@ -20,6 +21,9 @@ function App() {
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
   const setSupplyPoints = useSupplyStore((s) => s.setSupplyPoints);
   const setIsLoading = useSupplyStore((s) => s.setIsLoading);
+
+  const dailyTargetKm = useRouteStore((s) => s.dailyTargetKm);
+  const setDaySegments = useRouteStore((s) => s.setDaySegments);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -69,9 +73,10 @@ function App() {
         const corridor = bufferRoute(routeGeometry!, corridorWidthKm);
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
 
-        const [paczkomatyRaw, shopsRaw] = await Promise.allSettled([
+        const [paczkomatyRaw, shopsRaw, waterRaw] = await Promise.allSettled([
           fetchPaczkomaty(bounds),
           fetchShopsNearBbox(bounds),
+          fetchWaterSourcesNearBbox(bounds),
         ]);
 
         if (cancelled) return;
@@ -123,10 +128,32 @@ function App() {
           }
         }
 
+        if (waterRaw.status === 'fulfilled') {
+          for (const w of waterRaw.value) {
+            if (isPointInCorridor(w.lat, w.lng, corridor)) {
+              supplyPoints.push({
+                id: `water-${w.id}`,
+                name: w.name,
+                lat: w.lat,
+                lng: w.lng,
+                type: 'water',
+                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, w.lat, w.lng),
+                details: { waterType: w.waterType },
+              });
+            }
+          }
+        }
+
         supplyPoints.sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
 
         if (!cancelled) {
           setSupplyPoints(supplyPoints);
+
+          // Auto-calculate day segments
+          if (routeGeometry) {
+            const segments = splitRouteIntoDays(routeGeometry, dailyTargetKm, supplyPoints);
+            setDaySegments(segments);
+          }
         }
       } catch (err) {
         console.error('Failed to load supply points:', err);
@@ -139,7 +166,7 @@ function App() {
 
     loadSupplyPoints();
     return () => { cancelled = true; };
-  }, [routeGeometry, corridorWidthKm, setSupplyPoints, setIsLoading]);
+  }, [routeGeometry, corridorWidthKm, dailyTargetKm, setSupplyPoints, setIsLoading, setDaySegments]);
 
   return (
     <div className="app">

@@ -3,6 +3,7 @@ import { useRouteStore } from '../../store/routeStore';
 import { WaypointMarkers } from './WaypointMarkers';
 import { RouteLayer } from './RouteLayer';
 import { SupplyMarkers } from './SupplyMarkers';
+import { DayMarkers } from './DayMarkers';
 import 'leaflet/dist/leaflet.css';
 
 function MapClickHandler() {
@@ -34,6 +35,7 @@ export function MapView() {
       <WaypointMarkers />
       <RouteLayer />
       <SupplyMarkers />
+      <DayMarkers />
     </MapContainer>
   );
 }

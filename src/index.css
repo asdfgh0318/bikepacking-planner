@@ -684,6 +684,93 @@ html, body, #root {
 }
 .item-cal::after { content: ' kcal'; }
 
+/* === Day Segments === */
+.day-segments {
+  margin-bottom: 16px;
+}
+
+.day-segments-header {
+  margin-bottom: 8px;
+}
+
+.day-list {
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.day-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.day-item:last-child { border-bottom: none; }
+
+.day-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.day-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-stats {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.day-dist {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.day-ele {
+  font-size: 11px;
+  font-weight: 600;
+}
+.day-ele.up { color: var(--green); }
+.day-ele.down { color: var(--red); }
+
+.day-stops {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.day-no-stops {
+  color: var(--yellow);
+}
+
+/* === Route Actions === */
+.route-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-export {
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--green);
+  gap: 8px;
+}
+.btn-export:hover {
+  background: rgba(74, 222, 128, 0.2);
+}
+
 /* === GPX Import === */
 .gpx-drop {
   border: 2px dashed var(--border);
@@ -786,7 +873,7 @@ html, body, #root {
 .leaflet-control-zoom a:hover { background: var(--surface-2) !important; }
 
 /* Reset divIcon background */
-.waypoint-marker-wrap, .supply-marker-wrap {
+.waypoint-marker-wrap, .supply-marker-wrap, .day-marker-wrap {
   background: none !important;
   border: none !important;
 }

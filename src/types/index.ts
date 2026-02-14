@@ -46,12 +46,26 @@ export interface SupplyPoint {
   name: string;
   lat: number;
   lng: number;
-  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop';
+  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water';
   distanceFromStartKm: number;
   details?: {
     address?: string;
     openingHours?: string;
     is24h?: boolean;
     lockerSize?: string[];
+    waterType?: 'spring' | 'drinking_water' | 'fountain' | 'tap' | 'stream';
   };
+}
+
+// Day Splitting
+export interface DaySegment {
+  dayNumber: number;
+  startKm: number;
+  endKm: number;
+  distanceKm: number;
+  ascentM: number;
+  descentM: number;
+  startCoord: [number, number]; // [lng, lat]
+  endCoord: [number, number];
+  supplyStops: SupplyPoint[];
 }

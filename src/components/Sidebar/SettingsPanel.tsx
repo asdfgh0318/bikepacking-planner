@@ -7,6 +7,8 @@ export function SettingsPanel() {
   const setShowPaczkomaty = useSupplyStore((s) => s.setShowPaczkomaty);
   const showShops = useSupplyStore((s) => s.showShops);
   const setShowShops = useSupplyStore((s) => s.setShowShops);
+  const showWater = useSupplyStore((s) => s.showWater);
+  const setShowWater = useSupplyStore((s) => s.setShowWater);
 
   return (
     <div className="panel">
@@ -49,6 +51,16 @@ export function SettingsPanel() {
             <span>Shops (Żabka, Biedronka)</span>
           </div>
           <div className={`toggle ${showShops ? 'on' : ''}`} onClick={() => setShowShops(!showShops)}>
+            <div className="toggle-thumb" />
+          </div>
+        </label>
+
+        <label className="toggle-row">
+          <div className="toggle-info">
+            <span className="toggle-dot" style={{ background: '#38bdf8' }} />
+            <span>Water Sources</span>
+          </div>
+          <div className={`toggle ${showWater ? 'on' : ''}`} onClick={() => setShowWater(!showWater)}>
             <div className="toggle-thumb" />
           </div>
         </label>

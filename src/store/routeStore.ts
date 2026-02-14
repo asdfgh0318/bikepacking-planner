@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import type { Waypoint, RouteStats } from '../types';
+import type { Waypoint, RouteStats, DaySegment } from '../types';
 
 interface RouteState {
   waypoints: Waypoint[];
   routeGeometry: GeoJSON.LineString | null;
   routeStats: RouteStats | null;
   isCalculating: boolean;
+  daySegments: DaySegment[];
+  dailyTargetKm: number;
 
   addWaypoint: (lat: number, lng: number) => void;
   updateWaypoint: (id: string, lat: number, lng: number) => void;
@@ -15,6 +17,8 @@ interface RouteState {
   setRouteStats: (stats: RouteStats | null) => void;
   setIsCalculating: (v: boolean) => void;
   setWaypoints: (wps: Waypoint[]) => void;
+  setDaySegments: (segs: DaySegment[]) => void;
+  setDailyTargetKm: (km: number) => void;
 }
 
 let nextId = 1;
@@ -24,6 +28,8 @@ export const useRouteStore = create<RouteState>((set) => ({
   routeGeometry: null,
   routeStats: null,
   isCalculating: false,
+  daySegments: [],
+  dailyTargetKm: 80,
 
   addWaypoint: (lat, lng) =>
     set((s) => ({
@@ -41,10 +47,12 @@ export const useRouteStore = create<RouteState>((set) => ({
     })),
 
   clearRoute: () =>
-    set({ waypoints: [], routeGeometry: null, routeStats: null }),
+    set({ waypoints: [], routeGeometry: null, routeStats: null, daySegments: [] }),
 
   setRouteGeometry: (geom) => set({ routeGeometry: geom }),
   setRouteStats: (stats) => set({ routeStats: stats }),
   setIsCalculating: (v) => set({ isCalculating: v }),
   setWaypoints: (wps) => set({ waypoints: wps }),
+  setDaySegments: (segs) => set({ daySegments: segs }),
+  setDailyTargetKm: (km) => set({ dailyTargetKm: km }),
 }));

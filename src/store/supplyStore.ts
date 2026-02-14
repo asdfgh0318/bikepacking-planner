@@ -6,12 +6,14 @@ interface SupplyState {
   corridorWidthKm: number;
   showPaczkomaty: boolean;
   showShops: boolean;
+  showWater: boolean;
   isLoading: boolean;
 
   setSupplyPoints: (pts: SupplyPoint[]) => void;
   setCorridorWidthKm: (km: number) => void;
   setShowPaczkomaty: (v: boolean) => void;
   setShowShops: (v: boolean) => void;
+  setShowWater: (v: boolean) => void;
   setIsLoading: (v: boolean) => void;
 }
 
@@ -20,11 +22,13 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   corridorWidthKm: 2,
   showPaczkomaty: true,
   showShops: true,
+  showWater: true,
   isLoading: false,
 
   setSupplyPoints: (pts) => set({ supplyPoints: pts }),
   setCorridorWidthKm: (km) => set({ corridorWidthKm: km }),
   setShowPaczkomaty: (v) => set({ showPaczkomaty: v }),
   setShowShops: (v) => set({ showShops: v }),
+  setShowWater: (v) => set({ showWater: v }),
   setIsLoading: (v) => set({ isLoading: v }),
 }));
