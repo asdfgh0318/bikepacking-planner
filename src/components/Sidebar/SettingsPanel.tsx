@@ -9,6 +9,8 @@ export function SettingsPanel() {
   const setShowShops = useSupplyStore((s) => s.setShowShops);
   const showWater = useSupplyStore((s) => s.showWater);
   const setShowWater = useSupplyStore((s) => s.setShowWater);
+  const showCampsites = useSupplyStore((s) => s.showCampsites);
+  const setShowCampsites = useSupplyStore((s) => s.setShowCampsites);
 
   return (
     <div className="panel">
@@ -61,6 +63,16 @@ export function SettingsPanel() {
             <span>Water Sources</span>
           </div>
           <div className={`toggle ${showWater ? 'on' : ''}`} onClick={() => setShowWater(!showWater)}>
+            <div className="toggle-thumb" />
+          </div>
+        </label>
+
+        <label className="toggle-row">
+          <div className="toggle-info">
+            <span className="toggle-dot" style={{ background: '#c084fc' }} />
+            <span>Campsites & Shelters</span>
+          </div>
+          <div className={`toggle ${showCampsites ? 'on' : ''}`} onClick={() => setShowCampsites(!showCampsites)}>
             <div className="toggle-thumb" />
           </div>
         </label>

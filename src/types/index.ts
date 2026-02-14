@@ -46,7 +46,7 @@ export interface SupplyPoint {
   name: string;
   lat: number;
   lng: number;
-  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water';
+  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite';
   distanceFromStartKm: number;
   details?: {
     address?: string;
@@ -54,6 +54,9 @@ export interface SupplyPoint {
     is24h?: boolean;
     lockerSize?: string[];
     waterType?: 'spring' | 'drinking_water' | 'fountain' | 'tap' | 'stream';
+    campsiteType?: 'camp_site' | 'shelter' | 'wilderness_hut' | 'bivouac';
+    capacity?: string;
+    fee?: boolean;
   };
 }
 

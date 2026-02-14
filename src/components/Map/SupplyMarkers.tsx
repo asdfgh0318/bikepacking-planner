@@ -1,7 +1,6 @@
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { useSupplyStore } from '../../store/supplyStore';
-import type { SupplyPoint } from '../../types';
 
 // SVG icons for supply types
 const ICONS: Record<string, string> = {
@@ -10,6 +9,7 @@ const ICONS: Record<string, string> = {
   biedronka: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#991b1b" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
   shop: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1e40af" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
   water: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0c4a6e" stroke-width="2.5"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+  campsite: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#5b21b6" stroke-width="2.5"><path d="M12 2L2 22h20L12 2z"/><path d="M12 14v4"/></svg>`,
 };
 
 const COLORS: Record<string, { bg: string; border: string }> = {
@@ -18,6 +18,7 @@ const COLORS: Record<string, { bg: string; border: string }> = {
   biedronka: { bg: '#f87171', border: '#991b1b' },
   shop: { bg: '#60a5fa', border: '#1e40af' },
   water: { bg: '#38bdf8', border: '#0c4a6e' },
+  campsite: { bg: '#c084fc', border: '#5b21b6' },
 };
 
 function createSupplyIcon(type: string) {
@@ -52,6 +53,7 @@ const TYPE_LABELS: Record<string, string> = {
   biedronka: 'Biedronka',
   shop: 'Shop',
   water: 'Water Source',
+  campsite: 'Campsite',
 };
 
 export function SupplyMarkers() {
@@ -59,11 +61,13 @@ export function SupplyMarkers() {
   const showPaczkomaty = useSupplyStore((s) => s.showPaczkomaty);
   const showShops = useSupplyStore((s) => s.showShops);
   const showWater = useSupplyStore((s) => s.showWater);
+  const showCampsites = useSupplyStore((s) => s.showCampsites);
 
   const visible = supplyPoints.filter((p) => {
     if (p.type === 'paczkomat' && !showPaczkomaty) return false;
     if (p.type === 'water' && !showWater) return false;
-    if (p.type !== 'paczkomat' && p.type !== 'water' && !showShops) return false;
+    if (p.type === 'campsite' && !showCampsites) return false;
+    if (p.type !== 'paczkomat' && p.type !== 'water' && p.type !== 'campsite' && !showShops) return false;
     return true;
   });
 
@@ -82,12 +86,18 @@ export function SupplyMarkers() {
                   {pt.details.waterType.replace('_', ' ')}
                 </div>
               )}
+              {pt.details?.campsiteType && (
+                <div style={{ fontSize: 12, color: '#c084fc', marginTop: 4 }}>
+                  {pt.details.campsiteType.replace('_', ' ')}
+                  {pt.details.capacity && ` · ${pt.details.capacity} spots`}
+                </div>
+              )}
               {pt.details?.address && (
                 <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                   {pt.details.address}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                 <span style={{
                   background: '#f1f5f9',
                   padding: '2px 6px',
@@ -107,6 +117,18 @@ export function SupplyMarkers() {
                     fontWeight: 600,
                   }}>
                     24/7
+                  </span>
+                )}
+                {pt.details?.fee === false && (
+                  <span style={{
+                    background: '#dcfce7',
+                    color: '#166534',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}>
+                    Free
                   </span>
                 )}
               </div>

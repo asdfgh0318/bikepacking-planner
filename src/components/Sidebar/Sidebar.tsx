@@ -4,6 +4,7 @@ import { SupplyPanel } from './SupplyPanel';
 import { DietPanel } from './DietPanel';
 import { SettingsPanel } from './SettingsPanel';
 import { GPXImport } from './GPXImport';
+import { SavedRoutes } from './SavedRoutes';
 
 type Tab = 'route' | 'supply' | 'diet' | 'settings';
 
@@ -58,6 +59,7 @@ export function Sidebar() {
               <>
                 <RoutePanel />
                 <GPXImport />
+                <SavedRoutes />
               </>
             )}
             {activeTab === 'supply' && <SupplyPanel />}

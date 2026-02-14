@@ -6,8 +6,9 @@ import { useRouteStore } from './store/routeStore';
 import { useSupplyStore } from './store/supplyStore';
 import { calculateRoute } from './services/brouter';
 import { fetchPaczkomaty } from './services/inpost';
-import { fetchShopsNearBbox, fetchWaterSourcesNearBbox } from './services/overpass';
+import { fetchShopsNearBbox, fetchWaterSourcesNearBbox, fetchCampsitesNearBbox } from './services/overpass';
 import { splitRouteIntoDays } from './services/daySplitter';
+import { decodeRouteFromHash } from './services/routeStorage';
 import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from './utils/geo';
 import type { SupplyPoint } from './types';
 
@@ -25,7 +26,22 @@ function App() {
   const dailyTargetKm = useRouteStore((s) => s.dailyTargetKm);
   const setDaySegments = useRouteStore((s) => s.setDaySegments);
 
+  const setWaypoints = useRouteStore((s) => s.setWaypoints);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Load shared route from URL hash on mount
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#route=')) {
+      const encoded = hash.slice(7);
+      const decoded = decodeRouteFromHash(encoded);
+      if (decoded && decoded.waypoints.length >= 2) {
+        setWaypoints(decoded.waypoints);
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [setWaypoints]);
 
   // Recalculate route when waypoints change
   useEffect(() => {
@@ -73,10 +89,11 @@ function App() {
         const corridor = bufferRoute(routeGeometry!, corridorWidthKm);
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
 
-        const [paczkomatyRaw, shopsRaw, waterRaw] = await Promise.allSettled([
+        const [paczkomatyRaw, shopsRaw, waterRaw, campsiteRaw] = await Promise.allSettled([
           fetchPaczkomaty(bounds),
           fetchShopsNearBbox(bounds),
           fetchWaterSourcesNearBbox(bounds),
+          fetchCampsitesNearBbox(bounds),
         ]);
 
         if (cancelled) return;
@@ -139,6 +156,27 @@ function App() {
                 type: 'water',
                 distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, w.lat, w.lng),
                 details: { waterType: w.waterType },
+              });
+            }
+          }
+        }
+
+        if (campsiteRaw.status === 'fulfilled') {
+          for (const c of campsiteRaw.value) {
+            if (isPointInCorridor(c.lat, c.lng, corridor)) {
+              supplyPoints.push({
+                id: `camp-${c.id}`,
+                name: c.name,
+                lat: c.lat,
+                lng: c.lng,
+                type: 'campsite',
+                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, c.lat, c.lng),
+                details: {
+                  campsiteType: c.campsiteType,
+                  capacity: c.capacity,
+                  fee: c.fee,
+                  openingHours: c.openingHours,
+                },
               });
             }
           }

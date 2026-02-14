@@ -6,6 +6,7 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }
   biedronka: { icon: 'B', color: '#f87171', label: 'Biedronka' },
   shop: { icon: 'S', color: '#60a5fa', label: 'Shop' },
   water: { icon: 'W', color: '#38bdf8', label: 'Water' },
+  campsite: { icon: 'C', color: '#c084fc', label: 'Campsite' },
 };
 
 export function SupplyPanel() {
@@ -93,6 +94,12 @@ export function SupplyPanel() {
                 </div>
                 {pt.details?.waterType && (
                   <div className="supply-item-address">{pt.details.waterType.replace('_', ' ')}</div>
+                )}
+                {pt.details?.campsiteType && (
+                  <div className="supply-item-address">
+                    {pt.details.campsiteType.replace('_', ' ')}
+                    {pt.details.fee === false && ' · free'}
+                  </div>
                 )}
                 {pt.details?.address && (
                   <div className="supply-item-address">{pt.details.address}</div>

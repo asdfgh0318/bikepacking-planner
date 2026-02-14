@@ -7,6 +7,7 @@ interface SupplyState {
   showPaczkomaty: boolean;
   showShops: boolean;
   showWater: boolean;
+  showCampsites: boolean;
   isLoading: boolean;
 
   setSupplyPoints: (pts: SupplyPoint[]) => void;
@@ -14,6 +15,7 @@ interface SupplyState {
   setShowPaczkomaty: (v: boolean) => void;
   setShowShops: (v: boolean) => void;
   setShowWater: (v: boolean) => void;
+  setShowCampsites: (v: boolean) => void;
   setIsLoading: (v: boolean) => void;
 }
 
@@ -23,6 +25,7 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   showPaczkomaty: true,
   showShops: true,
   showWater: true,
+  showCampsites: true,
   isLoading: false,
 
   setSupplyPoints: (pts) => set({ supplyPoints: pts }),
@@ -30,5 +33,6 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   setShowPaczkomaty: (v) => set({ showPaczkomaty: v }),
   setShowShops: (v) => set({ showShops: v }),
   setShowWater: (v) => set({ showWater: v }),
+  setShowCampsites: (v) => set({ showCampsites: v }),
   setIsLoading: (v) => set({ isLoading: v }),
 }));
