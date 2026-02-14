@@ -1,0 +1,285 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --sidebar-width: 360px;
+  --color-primary: #e63946;
+  --color-bg: #1a1a2e;
+  --color-surface: #16213e;
+  --color-text: #eee;
+  --color-text-muted: #999;
+  --color-border: #333;
+  --color-paczkomat: #ffd60a;
+  --color-shop: #06d6a0;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.app {
+  display: flex;
+  height: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: 16px;
+}
+
+.sidebar h2 {
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+  color: var(--color-primary);
+}
+
+/* Map */
+.map-container {
+  flex: 1;
+  height: 100%;
+}
+
+/* Panels */
+.panel {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel h3 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  color: var(--color-text-muted);
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Waypoint list */
+.waypoint-list {
+  list-style: none;
+  margin-bottom: 8px;
+}
+
+.waypoint-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+
+/* Route stats */
+.route-stats {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-small {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.btn-small:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+/* Settings */
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.setting-row.checkbox {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.setting-row input[type="range"] {
+  width: 140px;
+  accent-color: var(--color-primary);
+}
+
+/* Supply list */
+.supply-list {
+  list-style: none;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.supply-item {
+  padding: 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+
+.supply-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.supply-item-details {
+  display: flex;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.supply-item-address {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+.badge-paczkomat {
+  background: var(--color-paczkomat);
+  color: #000;
+}
+
+.badge-zabka,
+.badge-biedronka,
+.badge-shop {
+  background: var(--color-shop);
+  color: #000;
+}
+
+.gap {
+  color: var(--color-text-muted);
+}
+
+.tag-24h {
+  background: var(--color-paczkomat);
+  color: #000;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+/* GPX import */
+input[type="file"] {
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+/* Map marker styles */
+.waypoint-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.supply-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.supply-icon.paczkomat {
+  background: var(--color-paczkomat);
+  color: #000;
+}
+
+.supply-icon.shop {
+  background: var(--color-shop);
+  color: #000;
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  background: #1a1a2e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column-reverse;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    height: 40vh;
+    border-right: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .map-container {
+    height: 60vh;
+  }
+}
