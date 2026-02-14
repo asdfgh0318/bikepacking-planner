@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
+import { Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
 import { parseGPX, readFileAsText } from '../../utils/gpx';
 
@@ -38,8 +40,9 @@ export function GPXImport() {
           }
           setRouteStats({ distanceKm: dist, ascentM: ascent, descentM: descent });
         }
+        toast.success('GPX imported', { description: `${waypoints.length} waypoints loaded` });
       } catch {
-        alert('Failed to parse GPX file');
+        toast.error('Failed to parse GPX file', { description: 'Check the file format and try again' });
       }
     },
     [setWaypoints, setRouteGeometry, setRouteStats]
@@ -60,11 +63,7 @@ export function GPXImport() {
           if (file) handleFile(file);
         }}
       >
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.4">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
+        <Upload size={28} strokeWidth={1.5} opacity={0.4} />
         <p>Drop GPX file or click to browse</p>
         <p className="hint">Strava, Komoot, Garmin...</p>
         <input

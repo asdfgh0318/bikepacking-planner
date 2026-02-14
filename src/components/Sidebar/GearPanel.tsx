@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { Check, X } from 'lucide-react';
 import { useGearStore } from '../../store/gearStore';
 import { useDietStore } from '../../store/dietStore';
+import { RangeSlider } from '../ui';
 import type { GearItem } from '../../types';
 
 const CATEGORY_CONFIG: Record<GearItem['category'], { label: string; color: string }> = {
@@ -86,25 +88,17 @@ export function GearPanel() {
 
       {/* Bike weight slider */}
       <div className="section-label">Bike Weight</div>
-      <div className="setting-card">
-        <div className="setting-header">
-          <span>Bike weight</span>
-          <span className="setting-value">{bikeWeightKg} kg</span>
-        </div>
-        <input
-          type="range"
-          min={6}
-          max={25}
-          step={0.5}
-          value={bikeWeightKg}
-          onChange={(e) => setBikeWeightKg(Number(e.target.value))}
-          className="range-input"
-        />
-        <div className="range-labels">
-          <span>6 kg (carbon)</span>
-          <span>25 kg (steel)</span>
-        </div>
-      </div>
+      <RangeSlider
+        label="Bike weight"
+        value={bikeWeightKg}
+        onChange={setBikeWeightKg}
+        min={6}
+        max={25}
+        step={0.5}
+        unit="kg"
+        minLabel="6 kg (carbon)"
+        maxLabel="25 kg (steel)"
+      />
 
       {/* Weight bar chart by category */}
       <div className="section-label">Gear by Category</div>
@@ -141,18 +135,12 @@ export function GearPanel() {
                 onClick={() => toggleItem(item.id)}
                 style={{ borderColor: item.packed ? cfg.color : undefined, background: item.packed ? cfg.color : undefined }}
               >
-                {item.packed && (
-                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#fff" strokeWidth="3">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
+                {item.packed && <Check size={12} color="#fff" strokeWidth={3} />}
               </div>
               <span className="gear-name">{item.name}</span>
               <span className="gear-weight">{item.weightG}g</span>
-              <button className="gear-remove" onClick={() => removeItem(item.id)}>
-                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
+              <button className="gear-remove" onClick={() => removeItem(item.id)} aria-label="Remove item">
+                <X size={12} />
               </button>
             </li>
           );

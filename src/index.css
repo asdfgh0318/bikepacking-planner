@@ -1260,6 +1260,31 @@ html, body, #root {
 }
 .gear-cat-select:focus { border-color: var(--green); }
 
+/* === Accessibility === */
+*:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.tab:focus-visible,
+.profile-btn:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 /* === Responsive === */
 @media (max-width: 768px) {
   .app { flex-direction: column-reverse; }

@@ -1,4 +1,5 @@
 import { useSupplyStore } from '../../store/supplyStore';
+import { Toggle, RangeSlider } from '../ui';
 
 export function SettingsPanel() {
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
@@ -17,77 +18,23 @@ export function SettingsPanel() {
   return (
     <div className="panel">
       <div className="section-label">Search Corridor</div>
-      <div className="setting-card">
-        <div className="setting-header">
-          <span>Corridor width</span>
-          <span className="setting-value">{corridorWidthKm} km</span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={10}
-          step={0.5}
-          value={corridorWidthKm}
-          onChange={(e) => setCorridorWidthKm(Number(e.target.value))}
-          className="range-input"
-        />
-        <div className="range-labels">
-          <span>1 km</span>
-          <span>10 km</span>
-        </div>
-      </div>
+      <RangeSlider
+        label="Corridor width"
+        value={corridorWidthKm}
+        onChange={setCorridorWidthKm}
+        min={1}
+        max={10}
+        step={0.5}
+        unit="km"
+      />
 
       <div className="section-label">Map Layers</div>
       <div className="setting-card">
-        <label className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-dot" style={{ background: '#fbbf24' }} />
-            <span>InPost Paczkomaty</span>
-          </div>
-          <div className={`toggle ${showPaczkomaty ? 'on' : ''}`} onClick={() => setShowPaczkomaty(!showPaczkomaty)}>
-            <div className="toggle-thumb" />
-          </div>
-        </label>
-
-        <label className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-dot" style={{ background: '#4ade80' }} />
-            <span>Shops (Żabka, Biedronka)</span>
-          </div>
-          <div className={`toggle ${showShops ? 'on' : ''}`} onClick={() => setShowShops(!showShops)}>
-            <div className="toggle-thumb" />
-          </div>
-        </label>
-
-        <label className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-dot" style={{ background: '#38bdf8' }} />
-            <span>Water Sources</span>
-          </div>
-          <div className={`toggle ${showWater ? 'on' : ''}`} onClick={() => setShowWater(!showWater)}>
-            <div className="toggle-thumb" />
-          </div>
-        </label>
-
-        <label className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-dot" style={{ background: '#c084fc' }} />
-            <span>Campsites & Shelters</span>
-          </div>
-          <div className={`toggle ${showCampsites ? 'on' : ''}`} onClick={() => setShowCampsites(!showCampsites)}>
-            <div className="toggle-thumb" />
-          </div>
-        </label>
-
-        <label className="toggle-row">
-          <div className="toggle-info">
-            <span className="toggle-dot" style={{ background: '#facc15' }} />
-            <span>Bike Repair Shops</span>
-          </div>
-          <div className={`toggle ${showRepair ? 'on' : ''}`} onClick={() => setShowRepair(!showRepair)}>
-            <div className="toggle-thumb" />
-          </div>
-        </label>
+        <Toggle checked={showPaczkomaty} onChange={setShowPaczkomaty} label="InPost Paczkomaty" color="#fbbf24" />
+        <Toggle checked={showShops} onChange={setShowShops} label="Shops (Żabka, Biedronka)" color="#4ade80" />
+        <Toggle checked={showWater} onChange={setShowWater} label="Water Sources" color="#38bdf8" />
+        <Toggle checked={showCampsites} onChange={setShowCampsites} label="Campsites & Shelters" color="#c084fc" />
+        <Toggle checked={showRepair} onChange={setShowRepair} label="Bike Repair Shops" color="#facc15" />
       </div>
     </div>
   );

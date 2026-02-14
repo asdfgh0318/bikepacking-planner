@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
+import { Printer } from 'lucide-react';
 import { useDietStore } from '../../store/dietStore';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import { DIET_PROFILES, generateSupplyOrders, calculateDailyCalories } from '../../services/diet';
+import { RangeSlider } from '../ui';
 import type { DietType, SupplyOrder } from '../../types';
 
 const DIET_OPTIONS: DietType[] = ['standard', 'high-energy', 'ultralight', 'keto', 'vegan'];
@@ -76,25 +78,17 @@ export function DietPanel() {
 
       {/* Ride days */}
       <div className="section-label">Trip Duration</div>
-      <div className="setting-card">
-        <div className="setting-header">
-          <span>Ride days</span>
-          <span className="setting-value">{rideDays}</span>
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={14}
-          step={1}
-          value={rideDays}
-          onChange={(e) => setRideDays(Number(e.target.value))}
-          className="range-input"
-        />
-        <div className="range-labels">
-          <span>1 day</span>
-          <span>14 days</span>
-        </div>
-      </div>
+      <RangeSlider
+        label="Ride days"
+        value={rideDays}
+        onChange={setRideDays}
+        min={1}
+        max={14}
+        step={1}
+        unit="days"
+        minLabel="1 day"
+        maxLabel="14 days"
+      />
 
       {/* Calorie estimate */}
       {routeStats && (
@@ -161,11 +155,7 @@ export function DietPanel() {
           ))}
 
           <button className="btn btn-share" onClick={handlePrintList}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
-            </svg>
+            <Printer size={14} />
             Print Shopping List
           </button>
         </div>

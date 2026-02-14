@@ -1,12 +1,14 @@
+import { MapPin, X, Download } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import { exportGPX, downloadGPX } from '../../utils/gpx';
+import { EmptyState, StatCard, RangeSlider } from '../ui';
 import type { RoutingProfile } from '../../types';
 
-const PROFILE_OPTIONS: { value: RoutingProfile; label: string; icon: string; desc: string }[] = [
-  { value: 'trekking', label: 'Gravel', icon: '🛤', desc: 'Mixed roads & paths' },
-  { value: 'fastbike', label: 'Road', icon: '🛣', desc: 'Paved roads only' },
-  { value: 'mtb', label: 'MTB', icon: '⛰', desc: 'Off-road trails' },
+const PROFILE_OPTIONS: { value: RoutingProfile; label: string; icon: string }[] = [
+  { value: 'trekking', label: 'Gravel', icon: '🛤' },
+  { value: 'fastbike', label: 'Road', icon: '🛣' },
+  { value: 'mtb', label: 'MTB', icon: '⛰' },
 ];
 
 export function RoutePanel() {
@@ -32,14 +34,11 @@ export function RoutePanel() {
   return (
     <div className="panel">
       {waypoints.length === 0 ? (
-        <div className="empty-state">
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#4ade80" strokeWidth="1.5" opacity="0.6">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-            <circle cx="12" cy="9" r="2.5"/>
-          </svg>
-          <p>Click on the map to add waypoints</p>
-          <p className="hint">or import a GPX file below</p>
-        </div>
+        <EmptyState
+          icon={<MapPin size={40} strokeWidth={1.5} color="#4ade80" opacity={0.6} />}
+          message="Click on the map to add waypoints"
+          hint="or import a GPX file below"
+        />
       ) : (
         <>
           {/* Routing profile selector */}
@@ -59,23 +58,11 @@ export function RoutePanel() {
           {/* Stats cards */}
           {routeStats && (
             <div className="stats-grid">
-              <div className="stat-card">
-                <span className="stat-value">{routeStats.distanceKm.toFixed(1)}</span>
-                <span className="stat-label">km</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value up">{routeStats.ascentM.toFixed(0)}</span>
-                <span className="stat-label">m up</span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-value down">{routeStats.descentM.toFixed(0)}</span>
-                <span className="stat-label">m down</span>
-              </div>
+              <StatCard value={routeStats.distanceKm.toFixed(1)} label="km" />
+              <StatCard value={routeStats.ascentM.toFixed(0)} label="m up" variant="up" />
+              <StatCard value={routeStats.descentM.toFixed(0)} label="m down" variant="down" />
               {daySegments.length > 0 && (
-                <div className="stat-card">
-                  <span className="stat-value">{daySegments.length}</span>
-                  <span className="stat-label">days</span>
-                </div>
+                <StatCard value={daySegments.length} label="days" />
               )}
             </div>
           )}
@@ -94,24 +81,16 @@ export function RoutePanel() {
                 <span className="section-label">Trip Plan ({daySegments.length} days)</span>
               </div>
 
-              <div className="setting-card" style={{ marginBottom: 12 }}>
-                <div className="setting-header">
-                  <span>Daily target</span>
-                  <span className="setting-value">{dailyTargetKm} km</span>
-                </div>
-                <input
-                  type="range"
+              <div style={{ marginBottom: 12 }}>
+                <RangeSlider
+                  label="Daily target"
+                  value={dailyTargetKm}
+                  onChange={setDailyTargetKm}
                   min={30}
                   max={150}
                   step={5}
-                  value={dailyTargetKm}
-                  onChange={(e) => setDailyTargetKm(Number(e.target.value))}
-                  className="range-input"
+                  unit="km"
                 />
-                <div className="range-labels">
-                  <span>30 km</span>
-                  <span>150 km</span>
-                </div>
               </div>
 
               <ul className="day-list">
@@ -164,10 +143,8 @@ export function RoutePanel() {
                   </span>
                   <span className="wp-coords">{wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}</span>
                 </div>
-                <button className="wp-remove" onClick={() => removeWaypoint(wp.id)} title="Remove">
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+                <button className="wp-remove" onClick={() => removeWaypoint(wp.id)} aria-label="Remove waypoint">
+                  <X size={14} />
                 </button>
               </li>
             ))}
@@ -177,11 +154,7 @@ export function RoutePanel() {
           <div className="route-actions">
             {routeGeometry && (
               <button className="btn btn-export" onClick={handleExportGPX}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
+                <Download size={14} />
                 Export GPX
               </button>
             )}

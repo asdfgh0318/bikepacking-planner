@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react';
+import { Share2, Download, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import {
@@ -29,6 +31,7 @@ export function SavedRoutes() {
     saveRoute({ name, waypoints, routeStats, dailyTargetKm, corridorWidthKm });
     setRoutes(getSavedRoutes());
     setSaveName('');
+    toast.success('Route saved', { description: name });
   }, [waypoints, routeStats, dailyTargetKm, corridorWidthKm, saveName]);
 
   const handleLoad = useCallback((route: SavedRoute) => {
@@ -38,6 +41,7 @@ export function SavedRoutes() {
   const handleDelete = useCallback((id: string) => {
     deleteRoute(id);
     setRoutes(getSavedRoutes());
+    toast.success('Route deleted');
   }, []);
 
   const handleShare = useCallback(() => {
@@ -92,20 +96,12 @@ export function SavedRoutes() {
             <button className="btn btn-save" onClick={handleSave}>Save</button>
           </div>
           <button className="btn btn-share" onClick={handleShare}>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/>
-              <polyline points="16 6 12 2 8 6"/>
-              <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
+            <Share2 size={14} />
             {copied ? 'Link copied!' : 'Copy share link'}
           </button>
           {routeGeometry && (
             <button className="btn btn-download" onClick={handleDownloadPackage}>
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
+              <Download size={14} />
               Download offline package
             </button>
           )}
@@ -132,11 +128,9 @@ export function SavedRoutes() {
                 <button
                   className="wp-remove"
                   onClick={() => handleDelete(route.id)}
-                  title="Delete"
+                  aria-label="Delete route"
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                  </svg>
+                  <X size={14} />
                 </button>
               </li>
             ))}

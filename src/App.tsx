@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Toaster, toast } from 'sonner';
 import { MapView } from './components/Map/MapView';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { ElevationProfile } from './components/ElevationProfile';
@@ -62,7 +63,7 @@ function App() {
         setRouteGeometry(geometry);
         setRouteStats(stats);
       } catch (err) {
-        console.error('Route calculation failed:', err);
+        toast.error('Route calculation failed', { description: 'Using straight line between waypoints' });
         const geom: GeoJSON.LineString = {
           type: 'LineString',
           coordinates: waypoints.map((w) => [w.lng, w.lat]),
@@ -217,7 +218,7 @@ function App() {
           }
         }
       } catch (err) {
-        console.error('Failed to load supply points:', err);
+        toast.error('Failed to load supply points', { description: 'Check your connection and try again' });
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -231,6 +232,18 @@ function App() {
 
   return (
     <div className="app">
+      <Toaster
+        theme="dark"
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'var(--surface-2)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
+            fontFamily: 'inherit',
+          },
+        }}
+      />
       <Sidebar />
       <div className="main-area">
         <main className="map-container">

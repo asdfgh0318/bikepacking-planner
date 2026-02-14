@@ -1,4 +1,6 @@
+import { Grid3X3 } from 'lucide-react';
 import { useSupplyStore } from '../../store/supplyStore';
+import { EmptyState } from '../ui';
 
 const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
   paczkomat: { icon: 'P', color: '#fbbf24', label: 'Paczkomat' },
@@ -28,17 +30,11 @@ export function SupplyPanel() {
   if (supplyPoints.length === 0) {
     return (
       <div className="panel">
-        <div className="empty-state">
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fbbf24" strokeWidth="1.5" opacity="0.6">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <line x1="3" y1="9" x2="21" y2="9"/>
-            <line x1="3" y1="15" x2="21" y2="15"/>
-            <line x1="9" y1="3" x2="9" y2="21"/>
-            <line x1="15" y1="3" x2="15" y2="21"/>
-          </svg>
-          <p>No supply points yet</p>
-          <p className="hint">Create a route to find Paczkomaty and shops</p>
-        </div>
+        <EmptyState
+          icon={<Grid3X3 size={40} strokeWidth={1.5} color="#fbbf24" opacity={0.6} />}
+          message="No supply points yet"
+          hint="Create a route to find Paczkomaty and shops"
+        />
       </div>
     );
   }
