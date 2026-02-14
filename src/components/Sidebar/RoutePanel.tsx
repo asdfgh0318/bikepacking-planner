@@ -1,4 +1,4 @@
-import { MapPin, X, Download } from 'lucide-react';
+import { MapPin, X, Download, Moon, Tent } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import { exportGPX, downloadGPX } from '../../utils/gpx';
@@ -120,6 +120,20 @@ export function RoutePanel() {
                           <span className="day-no-stops">No supply stops</span>
                         )}
                       </div>
+                      {seg.nightStop && (
+                        <div className={`day-night-stop ${seg.nightStop.type}`}>
+                          {seg.nightStop.type === 'campsite' ? (
+                            <Tent size={11} />
+                          ) : (
+                            <Moon size={11} />
+                          )}
+                          <span>
+                            {seg.nightStop.type === 'campsite'
+                              ? seg.nightStop.campsite?.name ?? 'Campsite'
+                              : 'Wild camp'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}

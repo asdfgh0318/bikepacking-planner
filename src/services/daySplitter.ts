@@ -1,15 +1,24 @@
 import * as turf from '@turf/turf';
-import type { DaySegment, Difficulty, SupplyPoint } from '../types';
+import type { DaySegment, Difficulty, NightStop, SupplyPoint, RoutingProfile } from '../types';
+
+// Base speeds by routing profile (km/h, loaded bikepacking)
+// Source: bikepacking.com pace data, surface type research
+const PROFILE_SPEEDS: Record<RoutingProfile, number> = {
+  fastbike: 18,    // paved roads
+  trekking: 14,    // mixed surfaces (gravel + road)
+  mtb: 9,          // singletrack-heavy routes
+};
 
 /**
  * Estimate ride time in hours for a bikepacking day.
  * Based on Naismith's rule adapted for loaded touring bikes:
- * - Base speed: ~15 km/h on flat (loaded touring)
+ * - Base speed varies by routing profile (9-18 km/h)
  * - Add 1 hour per 400m ascent (steep terrain penalty)
  * - Add 15 min break per 2 hours riding
  */
-function estimateRideHours(distanceKm: number, ascentM: number): number {
-  const flatHours = distanceKm / 15;
+function estimateRideHours(distanceKm: number, ascentM: number, profile: RoutingProfile = 'trekking'): number {
+  const baseSpeed = PROFILE_SPEEDS[profile] || 14;
+  const flatHours = distanceKm / baseSpeed;
   const climbHours = ascentM / 400;
   const ridingHours = flatHours + climbHours;
   const breakHours = Math.floor(ridingHours / 2) * 0.25;
@@ -23,13 +32,71 @@ function getDifficulty(hours: number, ascentM: number): Difficulty {
 }
 
 /**
+ * Find the best night stop near the end of a day segment.
+ * Prefers campsites within 10km of the day end point.
+ * Falls back to 'wild' camping at the day end coordinate.
+ */
+function findNightStop(
+  dayNumber: number,
+  endKm: number,
+  endCoord: [number, number],
+  supplyPoints: SupplyPoint[],
+  totalLength: number
+): NightStop {
+  // Don't suggest night stop for the final day (you're done!)
+  if (endKm >= totalLength - 0.5) {
+    return {
+      dayNumber,
+      campsite: null,
+      distanceFromStartKm: endKm,
+      coord: endCoord,
+      type: 'wild',
+    };
+  }
+
+  // Search for campsites within 10km of the day end
+  const searchRadius = 10;
+  const nearbyCampsites = supplyPoints
+    .filter(
+      (sp) =>
+        sp.type === 'campsite' &&
+        sp.distanceFromStartKm >= endKm - searchRadius &&
+        sp.distanceFromStartKm <= endKm + searchRadius
+    )
+    .sort(
+      (a, b) =>
+        Math.abs(a.distanceFromStartKm - endKm) - Math.abs(b.distanceFromStartKm - endKm)
+    );
+
+  if (nearbyCampsites.length > 0) {
+    const best = nearbyCampsites[0];
+    return {
+      dayNumber,
+      campsite: best,
+      distanceFromStartKm: best.distanceFromStartKm,
+      coord: [best.lng, best.lat],
+      type: 'campsite',
+    };
+  }
+
+  return {
+    dayNumber,
+    campsite: null,
+    distanceFromStartKm: endKm,
+    coord: endCoord,
+    type: 'wild',
+  };
+}
+
+/**
  * Split a route into daily segments.
  * Tries to align day-end points with nearby supply stops when possible.
  */
 export function splitRouteIntoDays(
   routeGeometry: GeoJSON.LineString,
   dailyTargetKm: number,
-  supplyPoints: SupplyPoint[]
+  supplyPoints: SupplyPoint[],
+  routingProfile: RoutingProfile = 'trekking'
 ): DaySegment[] {
   const line = turf.lineString(routeGeometry.coordinates);
   const totalLength = turf.length(line, { units: 'kilometers' });
@@ -80,7 +147,10 @@ export function splitRouteIntoDays(
     );
 
     const segDist = bestEnd - currentKm;
-    const hours = estimateRideHours(segDist, ascent);
+    const hours = estimateRideHours(segDist, ascent, routingProfile);
+
+    const endCoord = endPoint.geometry.coordinates as [number, number];
+    const nightStop = findNightStop(dayNum, bestEnd, endCoord, supplyPoints, totalLength);
 
     days.push({
       dayNumber: dayNum,
@@ -90,10 +160,11 @@ export function splitRouteIntoDays(
       ascentM: ascent,
       descentM: descent,
       startCoord: startPoint.geometry.coordinates as [number, number],
-      endCoord: endPoint.geometry.coordinates as [number, number],
+      endCoord,
       supplyStops: segmentSupply,
       estimatedHours: hours,
       difficulty: getDifficulty(hours, ascent),
+      nightStop,
     });
 
     currentKm = bestEnd;

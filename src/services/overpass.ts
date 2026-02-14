@@ -240,3 +240,68 @@ export async function fetchRepairShopsNearBbox(bounds: {
     };
   }).filter(Boolean) as RepairPoint[];
 }
+
+// Bail-out points: train stations, bus stops, hospitals
+export type BailOutType = 'train_station' | 'bus_stop' | 'hospital';
+
+export interface BailOutPoint {
+  id: number;
+  lat: number;
+  lng: number;
+  name: string;
+  bailOutType: BailOutType;
+  phone?: string;
+}
+
+export async function fetchBailOutPointsNearBbox(bounds: {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}): Promise<BailOutPoint[]> {
+  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+
+  // Only major rail stations (with names) and hospitals — skip halts & bus stops to reduce clutter
+  const query = `
+    [out:json][timeout:25];
+    (
+      node["railway"="station"]["name"](${bbox});
+      node["amenity"="hospital"]["name"](${bbox});
+      way["amenity"="hospital"]["name"](${bbox});
+    );
+    out center;
+  `;
+
+  const res = await fetch(OVERPASS_API, {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Overpass error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return (data.elements as OverpassElement[]).map((el) => {
+    const lat = el.lat || (el as any).center?.lat;
+    const lon = el.lon || (el as any).center?.lon;
+    if (!lat || !lon) return null;
+
+    let bailOutType: BailOutType = 'hospital';
+    if (el.tags.railway === 'station') bailOutType = 'train_station';
+
+    const label = bailOutType === 'train_station' ? 'Train station'
+      : bailOutType === 'hospital' ? 'Hospital'
+      : 'Bus stop';
+
+    return {
+      id: el.id,
+      lat,
+      lng: lon,
+      name: el.tags.name || label,
+      bailOutType,
+      phone: el.tags.phone || el.tags['contact:phone'],
+    };
+  }).filter(Boolean) as BailOutPoint[];
+}

@@ -45,6 +45,7 @@ export interface FoodItem {
   weightG: number;
   category: 'meal' | 'snack' | 'drink' | 'supplement';
   availableAt: ('paczkomat' | 'zabka' | 'biedronka' | 'shop')[];
+  estimatedPricePLN?: number;
 }
 
 export interface SupplyOrder {
@@ -62,7 +63,7 @@ export interface SupplyPoint {
   name: string;
   lat: number;
   lng: number;
-  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite' | 'repair';
+  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite' | 'repair' | 'train_station' | 'bus_stop' | 'hospital';
   distanceFromStartKm: number;
   details?: {
     address?: string;
@@ -76,6 +77,27 @@ export interface SupplyPoint {
     repairType?: 'shop' | 'repair_station';
     phone?: string;
   };
+}
+
+// Supply gap analysis
+export type GapSeverity = 'safe' | 'caution' | 'danger';
+
+export interface SupplyGap {
+  startKm: number;
+  endKm: number;
+  distanceKm: number;
+  severity: GapSeverity;
+  fromName: string;
+  toName: string;
+}
+
+// Night stop suggestion
+export interface NightStop {
+  dayNumber: number;
+  campsite: SupplyPoint | null;
+  distanceFromStartKm: number;
+  coord: [number, number];
+  type: 'campsite' | 'wild';
 }
 
 // Day Splitting
@@ -93,4 +115,138 @@ export interface DaySegment {
   supplyStops: SupplyPoint[];
   estimatedHours: number;
   difficulty: Difficulty;
+  nightStop?: NightStop;
+}
+
+// Weather Forecast (Open-Meteo)
+export type WeatherCondition =
+  | 'clear' | 'partly_cloudy' | 'cloudy' | 'fog'
+  | 'drizzle' | 'rain' | 'heavy_rain'
+  | 'snow' | 'thunderstorm';
+
+export interface DayWeather {
+  dayNumber: number;
+  date: string;                   // ISO date
+  tempMin: number;                // °C
+  tempMax: number;
+  precipitationSum: number;       // mm total
+  precipitationProbMax: number;   // 0-100 %
+  windSpeedMax: number;           // km/h
+  windDirection: number;          // degrees (0=N, 90=E, 180=S, 270=W)
+  condition: WeatherCondition;
+  weatherCode: number;            // WMO code
+}
+
+export interface RouteWeather {
+  days: DayWeather[];
+  fetchedAt: number;              // timestamp for cache
+  sampleCoord: [number, number];  // representative coordinate used
+}
+
+// Resupply Strategy
+export type ResupplyStrategyId = 'daily-ration' | 'grazer' | 'ultralight' | 'self-sufficient' | 'custom';
+
+export interface ResupplyStrategy {
+  id: ResupplyStrategyId;
+  label: string;
+  description: string;
+  maxStopsPerDay: number;       // 1 = daily ration, 3+ = graze
+  preferEarlyStop: boolean;     // pick up food early in the day
+  carryBufferDays: number;      // extra days of food to carry (0 = just today, 1 = tomorrow too)
+  minCalorieReserve: number;    // minimum kcal reserve before buying (0 = buy every stop)
+  preferStoreType: string[];    // store preference order
+}
+
+// Trip Context — season/weather adjustments
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+
+export interface TripContext {
+  season: Season;
+  daylightHours: number;       // available riding hours (daylight - 2h buffer)
+  waterMultiplier: number;     // 1.0 = normal, 1.5 = hot summer
+  extraGearWeightG: number;    // additional clothing/insulation weight
+}
+
+// Smart Resupply Pipeline
+export interface StopPurchase {
+  stopId: string;
+  stopName: string;
+  stopType: SupplyPoint['type'];
+  distanceKm: number;
+  dayNumber: number;
+  estimatedArrivalHour: number;
+  isOpenOnArrival: boolean | null;
+  items: FoodItem[];
+  totalCalories: number;
+  totalWeightG: number;
+  source: 'shop' | 'paczkomat';
+}
+
+export interface CarryWeightPoint {
+  distanceKm: number;
+  dayNumber: number;
+  foodWeightG: number;
+}
+
+export interface ResupplyWarning {
+  type: 'closed_store' | 'long_carry' | 'calorie_deficit' | 'heavy_load' | 'sunday_closed';
+  message: string;
+  dayNumber: number;
+  distanceKm: number;
+  severity: 'info' | 'warning' | 'danger';
+}
+
+export interface ResupplyPlan {
+  purchases: StopPurchase[];
+  carryWeightCurve: CarryWeightPoint[];
+  maxCarryWeightG: number;
+  totalCalories: number;
+  totalWeightG: number;
+  warnings: ResupplyWarning[];
+}
+
+// Paczkomat Pre-Shipping
+export interface PaczkomatParcel {
+  id: string;
+  targetPaczkomat: SupplyPoint;
+  dayNumber: number;
+  estimatedPickupDate: string;
+  shipByDate: string;
+  items: FoodItem[];
+  totalWeightG: number;
+  totalCalories: number;
+  lockerSize: 'A' | 'B' | 'C';
+}
+
+export interface PaczkomatConfig {
+  intervalDays: number;
+  prefer24h: boolean;
+  preferNearNightStop: boolean;
+  tripStartDate: string;
+  leadTimeDays: number;
+}
+
+export interface ShippingPlan {
+  parcels: PaczkomatParcel[];
+  totalParcels: number;
+  totalShippingWeightG: number;
+}
+
+// Unified Shopping Plan
+export interface DayShoppingBreakdown {
+  dayNumber: number;
+  distanceKm: number;
+  caloriesNeeded: number;
+  caloriesFromParcels: number;
+  caloriesFromShops: number;
+  carryWeightStartG: number;
+  carryWeightMaxG: number;
+  stops: StopPurchase[];
+  parcelPickup: PaczkomatParcel | null;
+}
+
+export interface UnifiedShoppingPlan {
+  resupply: ResupplyPlan;
+  shipping: ShippingPlan | null;
+  dayBreakdown: DayShoppingBreakdown[];
 }

@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Bike, ChevronLeft, ChevronRight, TrendingUp, Package, Coffee, Backpack, Settings } from 'lucide-react';
+import { Bike, ChevronLeft, ChevronRight, TrendingUp, Package, Coffee, Backpack, ShoppingCart, CloudSun, Settings } from 'lucide-react';
 import { RoutePanel } from './RoutePanel';
 import { SupplyPanel } from './SupplyPanel';
 import { DietPanel } from './DietPanel';
 import { GearPanel } from './GearPanel';
+import { ResupplyPanel } from './ResupplyPanel';
+import { WeatherPanel } from './WeatherPanel';
 import { SettingsPanel } from './SettingsPanel';
+import { BudgetPanel } from './BudgetPanel';
 import { GPXImport } from './GPXImport';
 import { SavedRoutes } from './SavedRoutes';
 
-type Tab = 'route' | 'supply' | 'diet' | 'gear' | 'settings';
+type Tab = 'route' | 'supply' | 'diet' | 'gear' | 'shopping' | 'weather' | 'settings';
 
 export function Sidebar() {
   const [activeTab, setActiveTab] = useState<Tab>('route');
@@ -45,6 +48,14 @@ export function Sidebar() {
               <Backpack size={16} />
               Gear
             </button>
+            <button className={`tab ${activeTab === 'shopping' ? 'active' : ''}`} onClick={() => setActiveTab('shopping')}>
+              <ShoppingCart size={16} />
+              Shop
+            </button>
+            <button className={`tab ${activeTab === 'weather' ? 'active' : ''}`} onClick={() => setActiveTab('weather')}>
+              <CloudSun size={16} />
+              Wx
+            </button>
             <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
               <Settings size={16} />
               Settings
@@ -55,6 +66,7 @@ export function Sidebar() {
             {activeTab === 'route' && (
               <>
                 <RoutePanel />
+                <BudgetPanel />
                 <GPXImport />
                 <SavedRoutes />
               </>
@@ -62,6 +74,8 @@ export function Sidebar() {
             {activeTab === 'supply' && <SupplyPanel />}
             {activeTab === 'diet' && <DietPanel />}
             {activeTab === 'gear' && <GearPanel />}
+            {activeTab === 'shopping' && <ResupplyPanel />}
+            {activeTab === 'weather' && <WeatherPanel />}
             {activeTab === 'settings' && <SettingsPanel />}
           </div>
         </>
