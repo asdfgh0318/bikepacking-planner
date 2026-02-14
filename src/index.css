@@ -986,7 +986,7 @@ html, body, #root {
 }
 
 /* === Leaflet Overrides === */
-.leaflet-container { background: var(--bg); font-family: inherit; }
+.leaflet-container { background: var(--bg); font-family: inherit; cursor: crosshair !important; }
 
 .leaflet-popup-content-wrapper {
   background: var(--surface) !important;

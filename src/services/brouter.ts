@@ -22,7 +22,8 @@ export async function calculateRoute(
     throw new Error('Need at least 2 waypoints');
   }
 
-  const lonlats = waypoints.map((w) => `${w.lng},${w.lat}`).join('|');
+  // Round to 6 decimal places — BRouter doesn't need more precision
+  const lonlats = waypoints.map((w) => `${w.lng.toFixed(6)},${w.lat.toFixed(6)}`).join('|');
 
   const params = new URLSearchParams({
     lonlats,
@@ -33,6 +34,10 @@ export async function calculateRoute(
 
   const res = await fetch(`${BROUTER_API}?${params}`);
   if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    if (body.includes('not mapped')) {
+      throw new Error('Waypoint is too far from any road. Try moving it closer to a road.');
+    }
     throw new Error(`BRouter error: ${res.status}`);
   }
 

@@ -63,7 +63,8 @@ function App() {
         setRouteGeometry(geometry);
         setRouteStats(stats);
       } catch (err) {
-        toast.error('Route calculation failed', { description: 'Using straight line between waypoints' });
+        const msg = err instanceof Error ? err.message : 'Using straight line between waypoints';
+        toast.error('Route calculation failed', { description: msg });
         const geom: GeoJSON.LineString = {
           type: 'LineString',
           coordinates: waypoints.map((w) => [w.lng, w.lat]),
