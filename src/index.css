@@ -500,6 +500,190 @@ html, body, #root {
   color: var(--yellow);
 }
 
+/* === Diet Panel === */
+.diet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.diet-option {
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.diet-option:hover { border-color: rgba(255,255,255,0.1); }
+.diet-option.active { border-color: var(--green); background: rgba(74, 222, 128, 0.08); }
+
+.diet-option-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.diet-option-desc {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.macro-bar {
+  display: flex;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.macro-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+}
+.macro-segment.carbs { background: var(--blue); }
+.macro-segment.fat { background: var(--yellow); }
+.macro-segment.protein { background: var(--red); }
+
+.calorie-estimate {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.cal-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 4px 0;
+}
+
+.cal-total {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--green);
+}
+
+.btn-primary {
+  background: var(--green);
+  color: #000;
+  font-weight: 700;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Orders */
+.orders-list { margin-top: 8px; }
+
+.order-card {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-day {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--green);
+  letter-spacing: 0.05em;
+}
+
+.order-stop {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.order-km {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.order-totals { text-align: right; }
+
+.order-cal {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.order-weight {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.order-items {
+  list-style: none;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.order-item:last-child { border-bottom: none; }
+
+.item-cat {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  color: #000;
+  flex-shrink: 0;
+}
+.cat-meal { background: var(--green); }
+.cat-snack { background: var(--yellow); }
+.cat-drink { background: var(--blue); }
+.cat-supplement { background: #c084fc; }
+
+.item-name {
+  flex: 1;
+  color: var(--text-dim);
+}
+
+.item-cal {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.item-cal::after { content: ' kcal'; }
+
 /* === GPX Import === */
 .gpx-drop {
   border: 2px dashed var(--border);

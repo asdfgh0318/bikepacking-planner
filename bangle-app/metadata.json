@@ -1,0 +1,19 @@
+{
+  "id": "bikepack",
+  "name": "Bikepacking Nav",
+  "shortName": "BikeNav",
+  "version": "0.1",
+  "description": "Bikepacking waypoint navigator - follow routes with arrow and distance to next waypoint",
+  "icon": "app.png",
+  "type": "app",
+  "tags": "gps,nav,cycling,bikepacking",
+  "supports": ["BANGLEJS2"],
+  "readme": "README.md",
+  "storage": [
+    { "name": "bikepack.app.js", "url": "app.js" },
+    { "name": "bikepack.img", "url": "app-icon.js", "evaluate": true }
+  ],
+  "data": [
+    { "name": "bikepack.route.json" }
+  ]
+}
