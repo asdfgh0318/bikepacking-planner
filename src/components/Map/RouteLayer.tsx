@@ -6,15 +6,34 @@ export function RouteLayer() {
 
   if (!routeGeometry) return null;
 
-  // GeoJSON is [lng, lat], Leaflet needs [lat, lng]
   const positions = routeGeometry.coordinates.map(
     (coord) => [coord[1], coord[0]] as [number, number]
   );
 
   return (
-    <Polyline
-      positions={positions}
-      pathOptions={{ color: '#e63946', weight: 4, opacity: 0.8 }}
-    />
+    <>
+      {/* Route shadow/outline */}
+      <Polyline
+        positions={positions}
+        pathOptions={{
+          color: '#000',
+          weight: 7,
+          opacity: 0.2,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }}
+      />
+      {/* Main route */}
+      <Polyline
+        positions={positions}
+        pathOptions={{
+          color: '#4ade80',
+          weight: 4,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }}
+      />
+    </>
   );
 }

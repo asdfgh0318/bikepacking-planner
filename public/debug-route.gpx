@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="BikepackingPlanner Debug"
+  xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Kraków → Zakopane Bikepacking</name>
+    <desc>Debug route through southern Poland - Kraków to Zakopane via scenic roads</desc>
+  </metadata>
+  <trk>
+    <name>Kraków → Zakopane</name>
+    <trkseg>
+      <trkpt lat="50.0614" lon="19.9372"><ele>219</ele></trkpt>
+      <trkpt lat="50.0480" lon="19.9350"><ele>225</ele></trkpt>
+      <trkpt lat="50.0310" lon="19.9280"><ele>235</ele></trkpt>
+      <trkpt lat="50.0150" lon="19.9200"><ele>248</ele></trkpt>
+      <trkpt lat="49.9980" lon="19.9100"><ele>260</ele></trkpt>
+      <trkpt lat="49.9800" lon="19.9050"><ele>278</ele></trkpt>
+      <trkpt lat="49.9620" lon="19.8980"><ele>295</ele></trkpt>
+      <trkpt lat="49.9440" lon="19.8900"><ele>310</ele></trkpt>
+      <trkpt lat="49.9260" lon="19.8850"><ele>330</ele></trkpt>
+      <trkpt lat="49.9080" lon="19.8780"><ele>355</ele></trkpt>
+      <trkpt lat="49.8900" lon="19.8700"><ele>380</ele></trkpt>
+      <trkpt lat="49.8720" lon="19.8650"><ele>410</ele></trkpt>
+      <trkpt lat="49.8540" lon="19.8600"><ele>445</ele></trkpt>
+      <trkpt lat="49.8360" lon="19.8550"><ele>480</ele></trkpt>
+      <trkpt lat="49.8180" lon="19.8500"><ele>520</ele></trkpt>
+      <trkpt lat="49.8000" lon="19.8450"><ele>560</ele></trkpt>
+      <trkpt lat="49.7820" lon="19.8500"><ele>605</ele></trkpt>
+      <trkpt lat="49.7640" lon="19.8550"><ele>650</ele></trkpt>
+      <trkpt lat="49.7460" lon="19.8600"><ele>700</ele></trkpt>
+      <trkpt lat="49.7280" lon="19.8700"><ele>755</ele></trkpt>
+      <trkpt lat="49.7100" lon="19.8800"><ele>810</ele></trkpt>
+      <trkpt lat="49.6920" lon="19.8900"><ele>860</ele></trkpt>
+      <trkpt lat="49.6740" lon="19.9000"><ele>900</ele></trkpt>
+      <trkpt lat="49.6560" lon="19.9100"><ele>935</ele></trkpt>
+      <trkpt lat="49.6380" lon="19.9200"><ele>960</ele></trkpt>
+      <trkpt lat="49.6200" lon="19.9300"><ele>940</ele></trkpt>
+      <trkpt lat="49.6020" lon="19.9400"><ele>920</ele></trkpt>
+      <trkpt lat="49.5840" lon="19.9450"><ele>895</ele></trkpt>
+      <trkpt lat="49.5660" lon="19.9500"><ele>870</ele></trkpt>
+      <trkpt lat="49.5480" lon="19.9550"><ele>850</ele></trkpt>
+      <trkpt lat="49.5300" lon="19.9600"><ele>840</ele></trkpt>
+      <trkpt lat="49.5120" lon="19.9650"><ele>835</ele></trkpt>
+      <trkpt lat="49.4940" lon="19.9700"><ele>840</ele></trkpt>
+      <trkpt lat="49.4760" lon="19.9750"><ele>850</ele></trkpt>
+      <trkpt lat="49.4580" lon="19.9800"><ele>860</ele></trkpt>
+      <trkpt lat="49.4400" lon="19.9850"><ele>870</ele></trkpt>
+      <trkpt lat="49.4220" lon="19.9900"><ele>880</ele></trkpt>
+      <trkpt lat="49.4040" lon="19.9950"><ele>890</ele></trkpt>
+      <trkpt lat="49.3860" lon="19.9980"><ele>895</ele></trkpt>
+      <trkpt lat="49.3680" lon="20.0000"><ele>890</ele></trkpt>
+      <trkpt lat="49.3500" lon="19.9960"><ele>880</ele></trkpt>
+      <trkpt lat="49.3320" lon="19.9920"><ele>870</ele></trkpt>
+      <trkpt lat="49.3140" lon="19.9880"><ele>860</ele></trkpt>
+      <trkpt lat="49.2990" lon="19.9490"><ele>838</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>

@@ -10,10 +10,12 @@ export function SettingsPanel() {
 
   return (
     <div className="panel">
-      <h3>Settings</h3>
-
-      <label className="setting-row">
-        <span>Corridor: {corridorWidthKm} km</span>
+      <div className="section-label">Search Corridor</div>
+      <div className="setting-card">
+        <div className="setting-header">
+          <span>Corridor width</span>
+          <span className="setting-value">{corridorWidthKm} km</span>
+        </div>
         <input
           type="range"
           min={1}
@@ -21,26 +23,36 @@ export function SettingsPanel() {
           step={0.5}
           value={corridorWidthKm}
           onChange={(e) => setCorridorWidthKm(Number(e.target.value))}
+          className="range-input"
         />
-      </label>
+        <div className="range-labels">
+          <span>1 km</span>
+          <span>10 km</span>
+        </div>
+      </div>
 
-      <label className="setting-row checkbox">
-        <input
-          type="checkbox"
-          checked={showPaczkomaty}
-          onChange={(e) => setShowPaczkomaty(e.target.checked)}
-        />
-        <span>Paczkomaty</span>
-      </label>
+      <div className="section-label">Map Layers</div>
+      <div className="setting-card">
+        <label className="toggle-row">
+          <div className="toggle-info">
+            <span className="toggle-dot" style={{ background: '#fbbf24' }} />
+            <span>InPost Paczkomaty</span>
+          </div>
+          <div className={`toggle ${showPaczkomaty ? 'on' : ''}`} onClick={() => setShowPaczkomaty(!showPaczkomaty)}>
+            <div className="toggle-thumb" />
+          </div>
+        </label>
 
-      <label className="setting-row checkbox">
-        <input
-          type="checkbox"
-          checked={showShops}
-          onChange={(e) => setShowShops(e.target.checked)}
-        />
-        <span>Shops (Żabka, Biedronka)</span>
-      </label>
+        <label className="toggle-row">
+          <div className="toggle-info">
+            <span className="toggle-dot" style={{ background: '#4ade80' }} />
+            <span>Shops (Żabka, Biedronka)</span>
+          </div>
+          <div className={`toggle ${showShops ? 'on' : ''}`} onClick={() => setShowShops(!showShops)}>
+            <div className="toggle-thumb" />
+          </div>
+        </label>
+      </div>
     </div>
   );
 }

@@ -23,10 +23,12 @@ export function MapView() {
       center={[51.9, 19.15]}
       zoom={7}
       style={{ width: '100%', height: '100%' }}
+      zoomControl={false}
     >
+      {/* Cycling-optimized tiles with terrain */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> | <a href="https://www.cyclosm.org">CyclOSM</a>'
+        url="https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png"
       />
       <MapClickHandler />
       <WaypointMarkers />

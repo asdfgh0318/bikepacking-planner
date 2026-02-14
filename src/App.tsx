@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { MapView } from './components/Map/MapView';
 import { Sidebar } from './components/Sidebar/Sidebar';
+import { ElevationProfile } from './components/ElevationProfile';
 import { useRouteStore } from './store/routeStore';
 import { useSupplyStore } from './store/supplyStore';
 import { calculateRoute } from './services/brouter';
@@ -40,7 +41,6 @@ function App() {
         setRouteStats(stats);
       } catch (err) {
         console.error('Route calculation failed:', err);
-        // Fallback: straight line
         const geom: GeoJSON.LineString = {
           type: 'LineString',
           coordinates: waypoints.map((w) => [w.lng, w.lat]),
@@ -69,7 +69,6 @@ function App() {
         const corridor = bufferRoute(routeGeometry!, corridorWidthKm);
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
 
-        // Fetch InPost and shops in parallel
         const [paczkomatyRaw, shopsRaw] = await Promise.allSettled([
           fetchPaczkomaty(bounds),
           fetchShopsNearBbox(bounds),
@@ -79,7 +78,6 @@ function App() {
 
         const supplyPoints: SupplyPoint[] = [];
 
-        // Process Paczkomaty
         if (paczkomatyRaw.status === 'fulfilled') {
           for (const p of paczkomatyRaw.value) {
             if (isPointInCorridor(p.location.latitude, p.location.longitude, corridor)) {
@@ -90,9 +88,7 @@ function App() {
                 lng: p.location.longitude,
                 type: 'paczkomat',
                 distanceFromStartKm: getDistanceAlongRoute(
-                  routeGeometry!,
-                  p.location.latitude,
-                  p.location.longitude
+                  routeGeometry!, p.location.latitude, p.location.longitude
                 ),
                 details: {
                   address: `${p.address.line1}, ${p.address.line2}`,
@@ -104,7 +100,6 @@ function App() {
           }
         }
 
-        // Process shops
         if (shopsRaw.status === 'fulfilled') {
           for (const s of shopsRaw.value) {
             if (isPointInCorridor(s.lat, s.lng, corridor)) {
@@ -122,15 +117,12 @@ function App() {
                 lng: s.lng,
                 type,
                 distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, s.lat, s.lng),
-                details: {
-                  openingHours: s.openingHours,
-                },
+                details: { openingHours: s.openingHours },
               });
             }
           }
         }
 
-        // Sort by distance along route
         supplyPoints.sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
 
         if (!cancelled) {
@@ -146,17 +138,18 @@ function App() {
     }
 
     loadSupplyPoints();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [routeGeometry, corridorWidthKm, setSupplyPoints, setIsLoading]);
 
   return (
     <div className="app">
       <Sidebar />
-      <main className="map-container">
-        <MapView />
-      </main>
+      <div className="main-area">
+        <main className="map-container">
+          <MapView />
+        </main>
+        <ElevationProfile />
+      </div>
     </div>
   );
 }
