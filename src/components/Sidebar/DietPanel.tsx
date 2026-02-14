@@ -3,7 +3,7 @@ import { useDietStore } from '../../store/dietStore';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import { DIET_PROFILES, generateSupplyOrders, calculateDailyCalories } from '../../services/diet';
-import type { DietType } from '../../types';
+import type { DietType, SupplyOrder } from '../../types';
 
 const DIET_OPTIONS: DietType[] = ['standard', 'high-energy', 'ultralight', 'keto', 'vegan'];
 
@@ -29,6 +29,17 @@ export function DietPanel() {
   const dailyCals = routeStats
     ? calculateDailyCalories(profile, routeStats.distanceKm / rideDays, routeStats.ascentM / rideDays)
     : 0;
+
+  const handlePrintList = useCallback(() => {
+    if (orders.length === 0) return;
+    const html = generateShoppingListHTML(orders);
+    const w = window.open('', '_blank');
+    if (w) {
+      w.document.write(html);
+      w.document.close();
+      w.print();
+    }
+  }, [orders]);
 
   return (
     <div className="panel">
@@ -148,8 +159,43 @@ export function DietPanel() {
               </ul>
             </div>
           ))}
+
+          <button className="btn btn-share" onClick={handlePrintList}>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6 9 6 2 18 2 18 9"/>
+              <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            Print Shopping List
+          </button>
         </div>
       )}
     </div>
   );
+}
+
+function generateShoppingListHTML(orders: SupplyOrder[]): string {
+  const totalCal = orders.reduce((s, o) => s + o.totalCalories, 0);
+  const totalKg = orders.reduce((s, o) => s + o.totalWeightG, 0) / 1000;
+  const stops = orders.map((order) => {
+    const items = order.items.map((item) =>
+      `<tr><td style="padding:4px 8px"><input type="checkbox"/> ${item.name}</td><td style="padding:4px 8px;text-align:right">${item.calories} kcal</td><td style="padding:4px 8px;text-align:right">${item.weightG}g</td></tr>`
+    ).join('');
+    return `
+      <div style="margin-bottom:20px;page-break-inside:avoid">
+        <h3 style="margin:0 0 4px">Day ${order.dayNumber} — ${order.stopName}</h3>
+        <p style="margin:0 0 8px;color:#666;font-size:13px">${order.distanceKm.toFixed(1)} km from start · ${order.totalCalories.toLocaleString()} kcal · ${(order.totalWeightG / 1000).toFixed(1)} kg</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr style="border-bottom:2px solid #333"><th style="text-align:left;padding:4px 8px">Item</th><th style="text-align:right;padding:4px 8px">Calories</th><th style="text-align:right;padding:4px 8px">Weight</th></tr></thead>
+          <tbody>${items}</tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><title>Bikepacking Shopping List</title>
+    <style>body{font-family:-apple-system,sans-serif;max-width:700px;margin:20px auto;padding:0 20px}
+    @media print{body{margin:0;padding:10px}}</style></head>
+    <body><h1 style="margin-bottom:4px">Bikepacking Shopping List</h1>
+    <p style="color:#666;margin-bottom:20px">${orders.length} stops · ${totalCal.toLocaleString()} kcal total · ${totalKg.toFixed(1)} kg</p>
+    ${stops}</body></html>`;
 }

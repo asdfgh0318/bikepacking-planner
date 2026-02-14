@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Waypoint, RouteStats, DaySegment } from '../types';
+import type { Waypoint, RouteStats, DaySegment, RoutingProfile } from '../types';
 
 interface RouteState {
   waypoints: Waypoint[];
@@ -8,6 +8,7 @@ interface RouteState {
   isCalculating: boolean;
   daySegments: DaySegment[];
   dailyTargetKm: number;
+  routingProfile: RoutingProfile;
 
   addWaypoint: (lat: number, lng: number) => void;
   updateWaypoint: (id: string, lat: number, lng: number) => void;
@@ -19,6 +20,7 @@ interface RouteState {
   setWaypoints: (wps: Waypoint[]) => void;
   setDaySegments: (segs: DaySegment[]) => void;
   setDailyTargetKm: (km: number) => void;
+  setRoutingProfile: (p: RoutingProfile) => void;
 }
 
 let nextId = 1;
@@ -30,6 +32,7 @@ export const useRouteStore = create<RouteState>((set) => ({
   isCalculating: false,
   daySegments: [],
   dailyTargetKm: 80,
+  routingProfile: 'trekking',
 
   addWaypoint: (lat, lng) =>
     set((s) => ({
@@ -55,4 +58,5 @@ export const useRouteStore = create<RouteState>((set) => ({
   setWaypoints: (wps) => set({ waypoints: wps }),
   setDaySegments: (segs) => set({ daySegments: segs }),
   setDailyTargetKm: (km) => set({ dailyTargetKm: km }),
+  setRoutingProfile: (p) => set({ routingProfile: p }),
 }));

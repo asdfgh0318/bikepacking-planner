@@ -1026,6 +1026,240 @@ html, body, #root {
   border: none !important;
 }
 
+/* === Routing Profile Selector === */
+.profile-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.profile-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.profile-btn:hover { background: rgba(255,255,255,0.08); }
+.profile-btn.active {
+  border-color: var(--green);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.profile-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.profile-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.profile-btn.active .profile-label { color: var(--green); }
+
+/* === Weight / Gear Panel === */
+.weight-summary {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.weight-total {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.weight-total-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+.weight-total-unit {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+.weight-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.weight-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.weight-val {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.weight-warning {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: var(--radius-sm);
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Weight bars */
+.weight-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.weight-bar-row {}
+
+.weight-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+.weight-bar-val {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.weight-bar-track {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.weight-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+  min-width: 2px;
+}
+
+/* Gear checklist */
+.gear-list {
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.gear-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.gear-item:last-child { border-bottom: none; }
+.gear-item.unpacked { opacity: 0.45; }
+
+.gear-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.gear-check.checked {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.gear-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gear-weight {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.gear-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.gear-item:hover .gear-remove { opacity: 1; }
+.gear-remove:hover { color: var(--red); }
+
+/* Add gear item */
+.gear-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gear-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.gear-weight-input {
+  width: 60px;
+  flex: 0 0 60px;
+}
+
+.gear-cat-select {
+  flex: 1;
+  padding: 8px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+}
+.gear-cat-select:focus { border-color: var(--green); }
+
 /* === Responsive === */
 @media (max-width: 768px) {
   .app { flex-direction: column-reverse; }

@@ -28,6 +28,8 @@ function App() {
 
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
 
+  const routingProfile = useRouteStore((s) => s.routingProfile);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Load shared route from URL hash on mount
@@ -56,7 +58,7 @@ function App() {
     debounceRef.current = setTimeout(async () => {
       setIsCalculating(true);
       try {
-        const { geometry, stats } = await calculateRoute(waypoints);
+        const { geometry, stats } = await calculateRoute(waypoints, routingProfile);
         setRouteGeometry(geometry);
         setRouteStats(stats);
       } catch (err) {
@@ -72,7 +74,7 @@ function App() {
     }, 500);
 
     return () => clearTimeout(debounceRef.current);
-  }, [waypoints, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
+  }, [waypoints, routingProfile, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
 
   // Fetch supply points when route or corridor changes
   useEffect(() => {

@@ -1,6 +1,13 @@
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
 import { exportGPX, downloadGPX } from '../../utils/gpx';
+import type { RoutingProfile } from '../../types';
+
+const PROFILE_OPTIONS: { value: RoutingProfile; label: string; icon: string; desc: string }[] = [
+  { value: 'trekking', label: 'Gravel', icon: '🛤', desc: 'Mixed roads & paths' },
+  { value: 'fastbike', label: 'Road', icon: '🛣', desc: 'Paved roads only' },
+  { value: 'mtb', label: 'MTB', icon: '⛰', desc: 'Off-road trails' },
+];
 
 export function RoutePanel() {
   const waypoints = useRouteStore((s) => s.waypoints);
@@ -12,6 +19,8 @@ export function RoutePanel() {
   const daySegments = useRouteStore((s) => s.daySegments);
   const dailyTargetKm = useRouteStore((s) => s.dailyTargetKm);
   const setDailyTargetKm = useRouteStore((s) => s.setDailyTargetKm);
+  const routingProfile = useRouteStore((s) => s.routingProfile);
+  const setRoutingProfile = useRouteStore((s) => s.setRoutingProfile);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
 
   const handleExportGPX = () => {
@@ -33,6 +42,20 @@ export function RoutePanel() {
         </div>
       ) : (
         <>
+          {/* Routing profile selector */}
+          <div className="profile-selector">
+            {PROFILE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`profile-btn ${routingProfile === opt.value ? 'active' : ''}`}
+                onClick={() => setRoutingProfile(opt.value)}
+              >
+                <span className="profile-icon">{opt.icon}</span>
+                <span className="profile-label">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+
           {/* Stats cards */}
           {routeStats && (
             <div className="stats-grid">

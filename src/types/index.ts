@@ -4,10 +4,26 @@ export interface Waypoint {
   lng: number;
 }
 
+export type RoutingProfile = 'trekking' | 'fastbike' | 'mtb';
+
 export interface RouteStats {
   distanceKm: number;
   ascentM: number;
   descentM: number;
+}
+
+// Gear & Weight
+export interface GearItem {
+  id: string;
+  name: string;
+  category: 'shelter' | 'sleep' | 'cooking' | 'clothing' | 'tools' | 'electronics' | 'other';
+  weightG: number;
+  packed: boolean;
+}
+
+export interface GearPreset {
+  name: string;
+  items: Omit<GearItem, 'id' | 'packed'>[];
 }
 
 // Diet & Supply Planning

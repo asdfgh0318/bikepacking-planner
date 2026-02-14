@@ -1,4 +1,4 @@
-import type { RouteStats } from '../types';
+import type { RouteStats, RoutingProfile } from '../types';
 
 const BROUTER_API = 'https://brouter.de/brouter';
 
@@ -15,7 +15,8 @@ interface BRouterResponse {
 }
 
 export async function calculateRoute(
-  waypoints: Array<{ lat: number; lng: number }>
+  waypoints: Array<{ lat: number; lng: number }>,
+  profile: RoutingProfile = 'trekking'
 ): Promise<{ geometry: GeoJSON.LineString; stats: RouteStats }> {
   if (waypoints.length < 2) {
     throw new Error('Need at least 2 waypoints');
@@ -25,7 +26,7 @@ export async function calculateRoute(
 
   const params = new URLSearchParams({
     lonlats,
-    profile: 'trekking',
+    profile,
     alternativeidx: '0',
     format: 'geojson',
   });
