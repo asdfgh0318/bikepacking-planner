@@ -1,4 +1,5 @@
 import type { RouteStats, RoutingProfile } from '../types';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
 
 const BROUTER_API = 'https://brouter.de/brouter';
 
@@ -16,7 +17,8 @@ interface BRouterResponse {
 
 export async function calculateRoute(
   waypoints: Array<{ lat: number; lng: number }>,
-  profile: RoutingProfile = 'trekking'
+  profile: RoutingProfile = 'trekking',
+  signal?: AbortSignal
 ): Promise<{ geometry: GeoJSON.LineString; stats: RouteStats }> {
   if (waypoints.length < 2) {
     throw new Error('Need at least 2 waypoints');
@@ -32,7 +34,7 @@ export async function calculateRoute(
     format: 'geojson',
   });
 
-  const res = await fetch(`${BROUTER_API}?${params}`);
+  const res = await fetchWithRetry(`${BROUTER_API}?${params}`, { signal });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     if (body.includes('not mapped')) {

@@ -179,20 +179,37 @@ function getSegmentElevation(
   startKm: number,
   endKm: number
 ): { ascent: number; descent: number } {
-  const line = turf.lineString(routeGeometry.coordinates);
-  const totalLen = turf.length(line, { units: 'kilometers' });
+  const coords = routeGeometry.coordinates;
 
   let ascent = 0;
   let descent = 0;
 
-  // Sample elevation at regular intervals
-  const stepKm = 0.5;
+  // Walk through actual route vertices, accumulating distance to find
+  // which coordinates fall within the [startKm, endKm] range.
+  // BRouter provides 3D coords [lng, lat, elevation] at every vertex,
+  // so using them directly captures all elevation changes instead of
+  // sampling at fixed intervals which misses 10-30% of actual ascent.
+  let cumulativeKm = 0;
   let prevEle: number | null = null;
 
-  for (let km = startKm; km <= endKm; km += stepKm) {
-    const pt = turf.along(line, Math.min(km, totalLen), { units: 'kilometers' });
-    const coord = pt.geometry.coordinates;
-    const ele = coord.length > 2 ? coord[2] : null;
+  for (let i = 0; i < coords.length; i++) {
+    if (i > 0) {
+      const from = turf.point(coords[i - 1]);
+      const to = turf.point(coords[i]);
+      cumulativeKm += turf.distance(from, to, { units: 'kilometers' });
+    }
+
+    // Skip coordinates before the segment start
+    if (cumulativeKm < startKm) {
+      // Still track elevation so the first in-range point can compute a diff
+      if (coords[i].length > 2) prevEle = coords[i][2];
+      continue;
+    }
+
+    // Stop once we pass the segment end
+    if (cumulativeKm > endKm) break;
+
+    const ele = coords[i].length > 2 ? coords[i][2] : null;
 
     if (ele != null && prevEle != null) {
       const diff = ele - prevEle;

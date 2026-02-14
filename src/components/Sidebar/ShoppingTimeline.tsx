@@ -19,6 +19,27 @@ const STOP_ICONS: Record<string, string> = {
   shop: 'S',
 };
 
+/**
+ * Format a decimal hour (e.g. 14.5) as "HH:MM" (e.g. "14:30").
+ */
+function formatArrivalHour(decimalHour: number): string {
+  const h = Math.floor(decimalHour);
+  const m = Math.round((decimalHour - h) * 60);
+  return `${h}:${m.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Return a CSS class for the arrival time badge based on store-hour viability.
+ * Green: 7:00-20:00 (comfortable shopping window)
+ * Yellow: 20:00-21:00 (close to closing)
+ * Red: before 7:00 or after 21:00 (likely closed)
+ */
+function arrivalTimeClass(decimalHour: number): string {
+  if (decimalHour < 7 || decimalHour >= 21) return 'timeline-arrival timeline-arrival-red';
+  if (decimalHour >= 20) return 'timeline-arrival timeline-arrival-yellow';
+  return 'timeline-arrival timeline-arrival-green';
+}
+
 export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
   const daySegments = useRouteStore((s) => s.daySegments);
   const routeWeather = useResupplyStore((s) => s.routeWeather);
@@ -71,6 +92,11 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
               <div className="timeline-stop-info">
                 <div className="timeline-stop-name">
                   {stop.source === 'paczkomat' ? `📦 ${stop.stopName}` : stop.stopName}
+                  {stop.estimatedArrivalHour != null && (
+                    <span className={arrivalTimeClass(stop.estimatedArrivalHour)}>
+                      ~{formatArrivalHour(stop.estimatedArrivalHour)}
+                    </span>
+                  )}
                 </div>
                 <div className="timeline-stop-meta">
                   <span>km {stop.distanceKm.toFixed(0)}</span>
@@ -98,23 +124,34 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
             ))}
 
           <div className="timeline-day-footer">
-            <div className="timeline-carry-bar">
-              <div
-                className="timeline-carry-fill"
-                style={{
-                  width: `${Math.min(100, (day.carryWeightMaxG / 3000) * 100)}%`,
-                  background:
-                    day.carryWeightMaxG < 1000
-                      ? '#4ade80'
-                      : day.carryWeightMaxG < 2000
-                        ? '#fbbf24'
-                        : '#f87171',
-                }}
-              />
-            </div>
-            <span className="timeline-carry-label">
-              max {(day.carryWeightMaxG / 1000).toFixed(1)} kg food
-            </span>
+            {(() => {
+              const carryLevel = day.carryWeightMaxG < 1000 ? 'Safe' : day.carryWeightMaxG < 2000 ? 'Caution' : 'Danger';
+              const carryColor = day.carryWeightMaxG < 1000 ? '#4ade80' : day.carryWeightMaxG < 2000 ? '#fbbf24' : '#f87171';
+              return (
+                <>
+                  <div
+                    className="timeline-carry-bar"
+                    role="meter"
+                    aria-label={`Food carry weight: ${(day.carryWeightMaxG / 1000).toFixed(1)} kg - ${carryLevel}`}
+                    aria-valuemin={0}
+                    aria-valuemax={3}
+                    aria-valuenow={parseFloat((day.carryWeightMaxG / 1000).toFixed(1))}
+                  >
+                    <div
+                      className="timeline-carry-fill"
+                      style={{
+                        width: `${Math.min(100, (day.carryWeightMaxG / 3000) * 100)}%`,
+                        background: carryColor,
+                      }}
+                    />
+                  </div>
+                  <span className="timeline-carry-label">
+                    max {(day.carryWeightMaxG / 1000).toFixed(1)} kg food
+                    <span className="timeline-carry-severity" style={{ color: carryColor }}> {carryLevel}</span>
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
         );
@@ -128,7 +165,7 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
             <span>Weather Alerts</span>
           </div>
           {weatherWarnings.map((w, i) => (
-            <div key={`wx-${i}`} className={`timeline-warning ${w.severity}`}>
+            <div key={`wx-${i}`} className={`timeline-warning ${w.severity}`} aria-label={`${w.severity === 'danger' ? 'Danger' : w.severity === 'warning' ? 'Caution' : 'Info'}: ${w.message}`}>
               {w.message}
             </div>
           ))}
@@ -143,7 +180,7 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
             <span>Warnings</span>
           </div>
           {plan.resupply.warnings.map((w, i) => (
-            <div key={i} className={`timeline-warning ${w.severity}`}>
+            <div key={i} className={`timeline-warning ${w.severity}`} aria-label={`${w.severity === 'danger' ? 'Danger' : w.severity === 'warning' ? 'Caution' : 'Info'}: ${w.message}`}>
               {w.message}
             </div>
           ))}

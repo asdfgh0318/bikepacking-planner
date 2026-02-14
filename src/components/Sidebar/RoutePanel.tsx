@@ -1,7 +1,9 @@
-import { MapPin, X, Download, Moon, Tent } from 'lucide-react';
+import { useRef } from 'react';
+import { MapPin, X, Download, Upload, Moon, Tent } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
-import { exportGPX, downloadGPX } from '../../utils/gpx';
+import { exportGPX, downloadGPX, readFileAsText, parseGPX } from '../../utils/gpx';
+import { parseGpxToWaypoints, exportRouteToGpx } from '../../services/gpx';
 import { EmptyState, StatCard, RangeSlider } from '../ui';
 import type { RoutingProfile } from '../../types';
 
@@ -24,6 +26,11 @@ export function RoutePanel() {
   const routingProfile = useRouteStore((s) => s.routingProfile);
   const setRoutingProfile = useRouteStore((s) => s.setRoutingProfile);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+  const setWaypoints = useRouteStore((s) => s.setWaypoints);
+  const setRouteGeometry = useRouteStore((s) => s.setRouteGeometry);
+  const setRouteStats = useRouteStore((s) => s.setRouteStats);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExportGPX = () => {
     if (!routeGeometry) return;
@@ -31,14 +38,85 @@ export function RoutePanel() {
     downloadGPX('bikepacking-route.gpx', gpxContent);
   };
 
+  const handleImportGPX = async (file: File) => {
+    try {
+      const text = await readFileAsText(file);
+      const { waypoints: parsed, geometry } = parseGPX(text);
+
+      if (parsed.length > 0) {
+        setWaypoints(parsed);
+      }
+      if (geometry) {
+        setRouteGeometry(geometry);
+        // Compute basic stats from the geometry coordinates
+        const coords = geometry.coordinates;
+        let dist = 0;
+        let ascent = 0;
+        let descent = 0;
+        for (let i = 1; i < coords.length; i++) {
+          const [x1, y1, z1] = coords[i - 1];
+          const [x2, y2, z2] = coords[i];
+          const dx = (x2 - x1) * 111.32 * Math.cos(((y1 + y2) / 2) * (Math.PI / 180));
+          const dy = (y2 - y1) * 110.574;
+          dist += Math.sqrt(dx * dx + dy * dy);
+          if (z1 != null && z2 != null) {
+            const diff = z2 - z1;
+            if (diff > 0) ascent += diff;
+            else descent += Math.abs(diff);
+          }
+        }
+        setRouteStats({ distanceKm: dist, ascentM: ascent, descentM: descent });
+      }
+    } catch {
+      // Fallback: try the simpler DOMParser-based parser from services/gpx
+      try {
+        const text = await readFileAsText(file);
+        const coords = parseGpxToWaypoints(text);
+        if (coords.length > 0) {
+          clearRoute();
+          const newWaypoints = coords.map((c, i) => ({
+            id: `gpx-import-${i}`,
+            lat: c.lat,
+            lng: c.lng,
+          }));
+          setWaypoints(newWaypoints);
+        }
+      } catch {
+        // silently fail
+      }
+    }
+    // Reset the file input so the same file can be re-imported
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="panel">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".gpx"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImportGPX(file);
+        }}
+      />
       {waypoints.length === 0 ? (
-        <EmptyState
-          icon={<MapPin size={40} strokeWidth={1.5} color="#4ade80" opacity={0.6} />}
-          message="Click on the map to add waypoints"
-          hint="or import a GPX file below"
-        />
+        <>
+          <EmptyState
+            icon={<MapPin size={40} strokeWidth={1.5} color="#4ade80" opacity={0.6} />}
+            message="Click on the map to add waypoints"
+            hint="or import a GPX file"
+          />
+          <div className="route-actions" style={{ marginTop: 8 }}>
+            <button className="btn btn-export" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={14} />
+              Import GPX
+            </button>
+          </div>
+        </>
       ) : (
         <>
           {/* Routing profile selector */}
@@ -166,6 +244,10 @@ export function RoutePanel() {
 
           {/* Action buttons */}
           <div className="route-actions">
+            <button className="btn btn-export" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={14} />
+              Import GPX
+            </button>
             {routeGeometry && (
               <button className="btn btn-export" onClick={handleExportGPX}>
                 <Download size={14} />

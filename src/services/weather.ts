@@ -1,11 +1,34 @@
 import * as turf from '@turf/turf';
 import type { DayWeather, RouteWeather, WeatherCondition, DaySegment } from '../types';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 
-// Cache weather for 1 hour
+// Cache weather for 1 hour, keyed by (rounded coordinate, tripStartDate)
 const CACHE_TTL_MS = 60 * 60 * 1000;
-let cachedWeather: RouteWeather | null = null;
+const weatherCache = new Map<string, RouteWeather>();
+
+function buildCacheKey(coord: [number, number], tripStartDate: string): string {
+  const lng = coord[0].toFixed(2);
+  const lat = coord[1].toFixed(2);
+  return `${lng},${lat}|${tripStartDate}`;
+}
+
+function getCachedWeather(coord: [number, number], tripStartDate: string): RouteWeather | null {
+  const key = buildCacheKey(coord, tripStartDate);
+  const entry = weatherCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.fetchedAt >= CACHE_TTL_MS) {
+    weatherCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedWeather(coord: [number, number], tripStartDate: string, data: RouteWeather): void {
+  const key = buildCacheKey(coord, tripStartDate);
+  weatherCache.set(key, data);
+}
 
 /**
  * Map WMO weather codes to our simplified conditions.
@@ -61,7 +84,8 @@ function getRouteMidpoint(routeGeometry: GeoJSON.LineString): [number, number] {
 async function fetchOpenMeteo(
   lat: number,
   lng: number,
-  forecastDays: number
+  forecastDays: number,
+  signal?: AbortSignal
 ): Promise<{
   daily: {
     time: string[];
@@ -90,7 +114,7 @@ async function fetchOpenMeteo(
     forecast_days: String(Math.min(forecastDays, 16)), // Open-Meteo max 16 days
   });
 
-  const res = await fetch(`${OPEN_METEO_URL}?${params}`);
+  const res = await fetchWithRetry(`${OPEN_METEO_URL}?${params}`, { signal });
   if (!res.ok) {
     throw new Error(`Open-Meteo error: ${res.status} ${res.statusText}`);
   }
@@ -104,14 +128,16 @@ async function fetchOpenMeteo(
 export async function fetchRouteWeather(
   routeGeometry: GeoJSON.LineString,
   daySegments: DaySegment[],
-  tripStartDate: string
+  tripStartDate: string,
+  signal?: AbortSignal
 ): Promise<RouteWeather> {
-  // Check cache
-  if (cachedWeather && Date.now() - cachedWeather.fetchedAt < CACHE_TTL_MS) {
-    return cachedWeather;
-  }
-
   const [lng, lat] = getRouteMidpoint(routeGeometry);
+
+  // Check cache — keyed by rounded coordinate + trip date
+  const cached = getCachedWeather([lng, lat], tripStartDate);
+  if (cached) {
+    return cached;
+  }
   const numDays = daySegments.length;
 
   // Check how far in the future the trip is (use noon to avoid timezone day-shift)
@@ -140,7 +166,7 @@ export async function fetchRouteWeather(
   }
 
   const forecastDays = Math.min(Math.max(daysUntilStart + numDays, 1), 16);
-  const data = await fetchOpenMeteo(lat, lng, forecastDays);
+  const data = await fetchOpenMeteo(lat, lng, forecastDays, signal);
 
   // Map API dates to trip days
   const days: DayWeather[] = [];
@@ -185,7 +211,7 @@ export async function fetchRouteWeather(
     sampleCoord: [lng, lat],
   };
 
-  cachedWeather = result;
+  setCachedWeather([lng, lat], tripStartDate, result);
   return result;
 }
 

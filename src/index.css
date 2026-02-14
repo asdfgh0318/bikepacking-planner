@@ -1535,6 +1535,33 @@ html, body, #root {
   opacity: 0.6;
 }
 
+/* Arrival time badges */
+.timeline-arrival {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 6px;
+  margin-left: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.timeline-arrival-green {
+  background: rgba(74, 222, 128, 0.18);
+  color: #22c55e;
+}
+
+.timeline-arrival-yellow {
+  background: rgba(251, 191, 36, 0.18);
+  color: #f59e0b;
+}
+
+.timeline-arrival-red {
+  background: rgba(248, 113, 113, 0.18);
+  color: #ef4444;
+}
+
 .timeline-day-footer {
   margin-top: 6px;
   display: flex;
@@ -1560,6 +1587,14 @@ html, body, #root {
   font-size: 10px;
   color: var(--text-muted);
   white-space: nowrap;
+}
+
+.timeline-carry-severity {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: 2px;
 }
 
 .timeline-maintenance {
@@ -2386,14 +2421,21 @@ html, body, #root {
 
 /* === Accessibility === */
 *:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }
 
 .btn:focus-visible,
 .tab:focus-visible,
-.profile-btn:focus-visible {
-  outline: 2px solid var(--green);
+.profile-btn:focus-visible,
+.collapse-btn:focus-visible,
+.mobile-toggle:focus-visible,
+.strategy-card:focus-visible,
+.diet-option:focus-visible,
+.gear-check:focus-visible,
+.save-input:focus-visible,
+.gear-cat-select:focus-visible {
+  outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }
 
@@ -2410,24 +2452,168 @@ html, body, #root {
 }
 
 /* === Responsive === */
+
+/* -- Mobile toggle button (hidden on desktop) -- */
+.mobile-toggle {
+  display: none;
+}
+
 @media (max-width: 768px) {
-  .app { flex-direction: column-reverse; }
+  .app {
+    flex-direction: column-reverse;
+    height: 100%;
+  }
 
   .sidebar {
     width: 100% !important;
     min-width: unset !important;
-    height: 45vh;
+    max-height: 45vh;
+    height: auto;
     border-right: none;
     border-top: 1px solid var(--border);
+    overflow-y: auto;
   }
 
   .sidebar.collapsed {
+    max-height: none;
     height: auto;
+    overflow: hidden;
   }
 
-  .main-area { height: 55vh; }
+  /* When mobile-collapsed: only show header + tab bar (~100px) */
+  .sidebar.mobile-collapsed {
+    max-height: none;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    height: 48px;
+    padding: 0 12px;
+  }
+
+  /* Hide desktop collapse button on mobile */
+  .collapse-btn {
+    display: none;
+  }
+
+  /* Show mobile toggle button */
+  .mobile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .mobile-toggle:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+
+  .main-area {
+    height: 55vh;
+    min-height: 55vh;
+    flex: none;
+  }
+
+  .map-container {
+    height: 100%;
+    width: 100%;
+  }
+
+  /* Tabs: horizontally scrollable */
+  .tab-nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 2px;
+    padding: 6px 6px;
+    scrollbar-width: none;
+  }
+  .tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    min-height: 36px;
+    font-size: 10px;
+  }
+
+  /* Panel content scrollable within sidebar */
+  .tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
 
   .elevation-svg { height: 60px; }
+
+  .elevation-profile {
+    padding: 6px 10px 4px;
+  }
+
+  /* Stat cards slightly smaller */
+  .stat-value { font-size: 20px; }
+  .stats-grid { gap: 6px; }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    max-height: 40vh;
+  }
+
+  .sidebar-header {
+    height: 42px;
+    padding: 0 10px;
+  }
+
+  .logo {
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .tab-content {
+    padding: 10px;
+  }
+
+  /* Hide tab text labels, show icons only */
+  .tab {
+    padding: 6px 6px;
+    gap: 0;
+    font-size: 0;
+    min-height: 32px;
+  }
+  .tab svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Reduce general font sizes */
+  .section-label { font-size: 10px; }
+  .stat-value { font-size: 18px; }
+  .stat-label { font-size: 10px; }
+  .stat-card { padding: 8px 6px; }
+
+  .panel { margin-bottom: 16px; }
+
+  .setting-header { font-size: 12px; }
+
+  .wp-label { font-size: 12px; }
+  .wp-coords { font-size: 10px; }
+
+  .supply-item-name { font-size: 12px; }
+  .supply-item-meta { font-size: 10px; }
+
+  .elevation-svg { height: 50px; }
+  .elevation-profile { padding: 4px 8px 3px; }
 }
 
 /* === Debug Panel === */

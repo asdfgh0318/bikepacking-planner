@@ -72,7 +72,15 @@ export const useResupplyStore = create<ResupplyState>((set) => ({
   setPaczkomatConfig: (key, value) =>
     set((s) => ({ paczkomatConfig: { ...s.paczkomatConfig, [key]: value } })),
   setResupplyConfig: (key, value) =>
-    set((s) => ({ resupplyConfig: { ...s.resupplyConfig, [key]: value } })),
+    set((s) => {
+      if (key === 'tripStartDate') {
+        const dateStr = value as string;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr) || isNaN(new Date(dateStr).getTime())) {
+          return s;
+        }
+      }
+      return { resupplyConfig: { ...s.resupplyConfig, [key]: value } };
+    }),
   setStrategyId: (id) =>
     set({ strategyId: id, strategy: { ...RESUPPLY_PRESETS[id] } }),
   setStrategyParam: (key, value) =>

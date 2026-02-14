@@ -57,6 +57,6 @@ export const useRouteStore = create<RouteState>((set) => ({
   setIsCalculating: (v) => set({ isCalculating: v }),
   setWaypoints: (wps) => set({ waypoints: wps }),
   setDaySegments: (segs) => set({ daySegments: segs }),
-  setDailyTargetKm: (km) => set({ dailyTargetKm: km }),
+  setDailyTargetKm: (km) => set({ dailyTargetKm: Math.max(20, Math.min(300, km)) }),
   setRoutingProfile: (p) => set({ routingProfile: p }),
 }));

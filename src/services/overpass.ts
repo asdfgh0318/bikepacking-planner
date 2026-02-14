@@ -1,3 +1,5 @@
+import { fetchWithRetry } from '../utils/fetchWithRetry';
+
 const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
 
 interface OverpassElement {
@@ -22,7 +24,7 @@ export async function fetchShopsNearBbox(bounds: {
   south: number;
   east: number;
   west: number;
-}): Promise<ShopPoint[]> {
+}, signal?: AbortSignal): Promise<ShopPoint[]> {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   // Query Żabka and Biedronka using brand:wikidata for reliability
@@ -35,10 +37,11 @@ export async function fetchShopsNearBbox(bounds: {
     out center;
   `;
 
-  const res = await fetch(OVERPASS_API, {
+  const res = await fetchWithRetry(OVERPASS_API, {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    signal,
   });
 
   if (!res.ok) {
@@ -46,14 +49,25 @@ export async function fetchShopsNearBbox(bounds: {
   }
 
   const data = await res.json();
-  return (data.elements as OverpassElement[]).map((el) => ({
-    id: el.id,
-    lat: el.lat,
-    lng: el.lon,
-    name: el.tags.name || el.tags.brand || 'Shop',
-    brand: el.tags.brand || 'unknown',
-    openingHours: el.tags.opening_hours,
-  }));
+  const elements: OverpassElement[] = data?.elements ?? [];
+  const results: ShopPoint[] = [];
+  for (const el of elements) {
+    try {
+      if (typeof el.lat !== 'number' || typeof el.lon !== 'number' || isNaN(el.lat) || isNaN(el.lon)) continue;
+      results.push({
+        id: el.id,
+        lat: el.lat,
+        lng: el.lon,
+        name: el.tags?.name || el.tags?.brand || 'Shop',
+        brand: el.tags?.brand || 'unknown',
+        openingHours: el.tags?.opening_hours,
+      });
+    } catch {
+      // Skip malformed element
+      continue;
+    }
+  }
+  return results;
 }
 
 export interface WaterPoint {
@@ -69,7 +83,7 @@ export async function fetchWaterSourcesNearBbox(bounds: {
   south: number;
   east: number;
   west: number;
-}): Promise<WaterPoint[]> {
+}, signal?: AbortSignal): Promise<WaterPoint[]> {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
@@ -83,10 +97,11 @@ export async function fetchWaterSourcesNearBbox(bounds: {
     out center;
   `;
 
-  const res = await fetch(OVERPASS_API, {
+  const res = await fetchWithRetry(OVERPASS_API, {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    signal,
   });
 
   if (!res.ok) {
@@ -94,20 +109,30 @@ export async function fetchWaterSourcesNearBbox(bounds: {
   }
 
   const data = await res.json();
-  return (data.elements as OverpassElement[]).map((el) => {
-    let waterType: WaterPoint['waterType'] = 'drinking_water';
-    if (el.tags.natural === 'spring') waterType = 'spring';
-    else if (el.tags.amenity === 'fountain') waterType = 'fountain';
-    else if (el.tags.man_made === 'water_tap') waterType = 'tap';
+  const elements: OverpassElement[] = data?.elements ?? [];
+  const results: WaterPoint[] = [];
+  for (const el of elements) {
+    try {
+      if (typeof el.lat !== 'number' || typeof el.lon !== 'number' || isNaN(el.lat) || isNaN(el.lon)) continue;
 
-    return {
-      id: el.id,
-      lat: el.lat,
-      lng: el.lon,
-      name: el.tags.name || waterType.replace('_', ' '),
-      waterType,
-    };
-  });
+      let waterType: WaterPoint['waterType'] = 'drinking_water';
+      if (el.tags?.natural === 'spring') waterType = 'spring';
+      else if (el.tags?.amenity === 'fountain') waterType = 'fountain';
+      else if (el.tags?.man_made === 'water_tap') waterType = 'tap';
+
+      results.push({
+        id: el.id,
+        lat: el.lat,
+        lng: el.lon,
+        name: el.tags?.name || waterType.replace('_', ' '),
+        waterType,
+      });
+    } catch {
+      // Skip malformed element
+      continue;
+    }
+  }
+  return results;
 }
 
 export interface CampsitePoint {
@@ -126,7 +151,7 @@ export async function fetchCampsitesNearBbox(bounds: {
   south: number;
   east: number;
   west: number;
-}): Promise<CampsitePoint[]> {
+}, signal?: AbortSignal): Promise<CampsitePoint[]> {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
@@ -143,10 +168,11 @@ export async function fetchCampsitesNearBbox(bounds: {
     out center;
   `;
 
-  const res = await fetch(OVERPASS_API, {
+  const res = await fetchWithRetry(OVERPASS_API, {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    signal,
   });
 
   if (!res.ok) {
@@ -154,33 +180,41 @@ export async function fetchCampsitesNearBbox(bounds: {
   }
 
   const data = await res.json();
-  return (data.elements as OverpassElement[]).map((el) => {
-    // For way elements, use center coordinates
-    const lat = el.lat || (el as any).center?.lat;
-    const lon = el.lon || (el as any).center?.lon;
-    if (!lat || !lon) return null;
+  const elements: OverpassElement[] = data?.elements ?? [];
+  const results: CampsitePoint[] = [];
+  for (const el of elements) {
+    try {
+      // For way elements, use center coordinates
+      const lat = el.lat || (el as any).center?.lat;
+      const lon = el.lon || (el as any).center?.lon;
+      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
 
-    let campsiteType: CampsitePoint['campsiteType'] = 'camp_site';
-    if (el.tags.tourism === 'wilderness_hut') campsiteType = 'wilderness_hut';
-    else if (el.tags.amenity === 'shelter') campsiteType = 'shelter';
-    else if (el.tags.camp_site === 'bivouac') campsiteType = 'bivouac';
+      let campsiteType: CampsitePoint['campsiteType'] = 'camp_site';
+      if (el.tags?.tourism === 'wilderness_hut') campsiteType = 'wilderness_hut';
+      else if (el.tags?.amenity === 'shelter') campsiteType = 'shelter';
+      else if (el.tags?.camp_site === 'bivouac') campsiteType = 'bivouac';
 
-    const label = campsiteType === 'camp_site' ? 'Campsite'
-      : campsiteType === 'wilderness_hut' ? 'Wilderness hut'
-      : campsiteType === 'shelter' ? 'Shelter'
-      : 'Bivouac';
+      const label = campsiteType === 'camp_site' ? 'Campsite'
+        : campsiteType === 'wilderness_hut' ? 'Wilderness hut'
+        : campsiteType === 'shelter' ? 'Shelter'
+        : 'Bivouac';
 
-    return {
-      id: el.id,
-      lat,
-      lng: lon,
-      name: el.tags.name || label,
-      campsiteType,
-      capacity: el.tags.capacity,
-      fee: el.tags.fee !== 'no',
-      openingHours: el.tags.opening_hours,
-    };
-  }).filter(Boolean) as CampsitePoint[];
+      results.push({
+        id: el.id,
+        lat,
+        lng: lon,
+        name: el.tags?.name || label,
+        campsiteType,
+        capacity: el.tags?.capacity,
+        fee: el.tags?.fee !== 'no',
+        openingHours: el.tags?.opening_hours,
+      });
+    } catch {
+      // Skip malformed element
+      continue;
+    }
+  }
+  return results;
 }
 
 export interface RepairPoint {
@@ -198,7 +232,7 @@ export async function fetchRepairShopsNearBbox(bounds: {
   south: number;
   east: number;
   west: number;
-}): Promise<RepairPoint[]> {
+}, signal?: AbortSignal): Promise<RepairPoint[]> {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
@@ -211,10 +245,11 @@ export async function fetchRepairShopsNearBbox(bounds: {
     out center;
   `;
 
-  const res = await fetch(OVERPASS_API, {
+  const res = await fetchWithRetry(OVERPASS_API, {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    signal,
   });
 
   if (!res.ok) {
@@ -222,23 +257,31 @@ export async function fetchRepairShopsNearBbox(bounds: {
   }
 
   const data = await res.json();
-  return (data.elements as OverpassElement[]).map((el) => {
-    const lat = el.lat || (el as any).center?.lat;
-    const lon = el.lon || (el as any).center?.lon;
-    if (!lat || !lon) return null;
+  const elements: OverpassElement[] = data?.elements ?? [];
+  const results: RepairPoint[] = [];
+  for (const el of elements) {
+    try {
+      const lat = el.lat || (el as any).center?.lat;
+      const lon = el.lon || (el as any).center?.lon;
+      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
 
-    const isStation = el.tags.amenity === 'bicycle_repair_station';
+      const isStation = el.tags?.amenity === 'bicycle_repair_station';
 
-    return {
-      id: el.id,
-      lat,
-      lng: lon,
-      name: el.tags.name || (isStation ? 'Repair station' : 'Bike shop'),
-      repairType: isStation ? 'repair_station' as const : 'shop' as const,
-      phone: el.tags.phone || el.tags['contact:phone'],
-      openingHours: el.tags.opening_hours,
-    };
-  }).filter(Boolean) as RepairPoint[];
+      results.push({
+        id: el.id,
+        lat,
+        lng: lon,
+        name: el.tags?.name || (isStation ? 'Repair station' : 'Bike shop'),
+        repairType: isStation ? 'repair_station' as const : 'shop' as const,
+        phone: el.tags?.phone || el.tags?.['contact:phone'],
+        openingHours: el.tags?.opening_hours,
+      });
+    } catch {
+      // Skip malformed element
+      continue;
+    }
+  }
+  return results;
 }
 
 // Bail-out points: train stations, bus stops, hospitals
@@ -258,7 +301,7 @@ export async function fetchBailOutPointsNearBbox(bounds: {
   south: number;
   east: number;
   west: number;
-}): Promise<BailOutPoint[]> {
+}, signal?: AbortSignal): Promise<BailOutPoint[]> {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   // Only major rail stations (with names) and hospitals — skip halts & bus stops to reduce clutter
@@ -272,10 +315,11 @@ export async function fetchBailOutPointsNearBbox(bounds: {
     out center;
   `;
 
-  const res = await fetch(OVERPASS_API, {
+  const res = await fetchWithRetry(OVERPASS_API, {
     method: 'POST',
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    signal,
   });
 
   if (!res.ok) {
@@ -283,25 +327,33 @@ export async function fetchBailOutPointsNearBbox(bounds: {
   }
 
   const data = await res.json();
-  return (data.elements as OverpassElement[]).map((el) => {
-    const lat = el.lat || (el as any).center?.lat;
-    const lon = el.lon || (el as any).center?.lon;
-    if (!lat || !lon) return null;
+  const elements: OverpassElement[] = data?.elements ?? [];
+  const results: BailOutPoint[] = [];
+  for (const el of elements) {
+    try {
+      const lat = el.lat || (el as any).center?.lat;
+      const lon = el.lon || (el as any).center?.lon;
+      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
 
-    let bailOutType: BailOutType = 'hospital';
-    if (el.tags.railway === 'station') bailOutType = 'train_station';
+      let bailOutType: BailOutType = 'hospital';
+      if (el.tags?.railway === 'station') bailOutType = 'train_station';
 
-    const label = bailOutType === 'train_station' ? 'Train station'
-      : bailOutType === 'hospital' ? 'Hospital'
-      : 'Bus stop';
+      const label = bailOutType === 'train_station' ? 'Train station'
+        : bailOutType === 'hospital' ? 'Hospital'
+        : 'Bus stop';
 
-    return {
-      id: el.id,
-      lat,
-      lng: lon,
-      name: el.tags.name || label,
-      bailOutType,
-      phone: el.tags.phone || el.tags['contact:phone'],
-    };
-  }).filter(Boolean) as BailOutPoint[];
+      results.push({
+        id: el.id,
+        lat,
+        lng: lon,
+        name: el.tags?.name || label,
+        bailOutType,
+        phone: el.tags?.phone || el.tags?.['contact:phone'],
+      });
+    } catch {
+      // Skip malformed element
+      continue;
+    }
+  }
+  return results;
 }

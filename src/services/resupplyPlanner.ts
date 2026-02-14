@@ -99,9 +99,11 @@ function getDayOfWeek(tripStartDate: string | undefined, dayNumber: number): num
   return start.getDay(); // 0=Sunday
 }
 
-// Polish Sunday shopping: Biedronka always closed, Żabka limited, others mostly closed
-const SUNDAY_CLOSED_TYPES = ['biedronka', 'shop'];
-const SUNDAY_LIMITED_TYPES = ['zabka']; // some open, limited hours
+// Polish Sunday trading ban: Biedronka (large retailer) always closed.
+// Generic 'shop' removed — small/owner-operated shops may be open on Sundays.
+// Żabka is a franchise (owner-operated) so it's open Sundays, typically reduced hours.
+const SUNDAY_CLOSED_TYPES = ['biedronka'];
+const SUNDAY_REDUCED_HOURS_TYPES = ['zabka']; // open but ~10:00-18:00 on Sundays
 
 /**
  * Select food items for a stop, prioritizing items available at this store type.
@@ -146,7 +148,7 @@ function selectFoodForStop(
 
 /**
  * Score and rank food stops for a day segment based on strategy.
- * Sunday-aware: penalizes shops that are typically closed on Polish Sundays.
+ * Sunday-aware: skips large retailers closed on Polish Sundays, penalizes reduced-hours stores.
  */
 function rankStops(
   stops: SupplyPoint[],
@@ -169,7 +171,7 @@ function rankStops(
     const arrivalHour = estimateArrivalHour(seg.startKm, stop.distanceFromStartKm, config.rideStartHour, config.avgSpeedKmh);
     const isOpen = stop.details?.is24h ? true : isOpenAt(stop.details?.openingHours, arrivalHour, dayOfWeek);
 
-    // On Sundays: skip Biedronka/regular shops entirely (Polish Sunday trading ban)
+    // On Sundays: skip Biedronka entirely (Polish Sunday trading ban for large retailers)
     if (isSunday && !stop.details?.is24h && SUNDAY_CLOSED_TYPES.includes(stop.type)) {
       continue;
     }
@@ -178,12 +180,12 @@ function rankStops(
 
     let score = storePref[stop.type] || 1;
 
-    // Sunday: boost 24h shops and Paczkomaty, penalize limited-hours Żabka
+    // Sunday: boost 24h shops and Paczkomaty, slight penalty for reduced-hours Żabka
     if (isSunday) {
       if (stop.details?.is24h || stop.type === 'paczkomat') {
         score += 8; // strong preference for 24h options on Sunday
-      } else if (SUNDAY_LIMITED_TYPES.includes(stop.type)) {
-        score -= 2; // Żabka may have limited Sunday hours
+      } else if (SUNDAY_REDUCED_HOURS_TYPES.includes(stop.type)) {
+        score -= 1; // Żabka open but reduced hours (~10-18), slight penalty
       }
     }
 
@@ -273,9 +275,9 @@ export function generateResupplyPlan(
     const bufferCals = strategy.carryBufferDays * avgDailyCals;
     let targetCals = Math.max(0, segCals + bufferCals - carryCalories);
 
-    // On Sundays, add extra buffer — most shops closed in Poland
+    // On Sundays, add small buffer — Biedronka closed, some stores have reduced hours
     if (isSunday) {
-      targetCals += avgDailyCals * 0.3; // 30% extra to compensate for limited options
+      targetCals += avgDailyCals * 0.15; // 15% extra to compensate for fewer options
     }
 
     // Extra for danger gaps
@@ -301,7 +303,7 @@ export function generateResupplyPlan(
       const dateStr = dayName.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
       warnings.push({
         type: 'sunday_closed',
-        message: `Day ${seg.dayNumber} (${dateStr}): Sunday — most shops closed in Poland. Stock up Saturday!`,
+        message: `Day ${seg.dayNumber} (${dateStr}): Sunday — Biedronka closed, Żabka has reduced hours. Consider stocking up Saturday.`,
         dayNumber: seg.dayNumber,
         distanceKm: seg.startKm,
         severity: 'warning',

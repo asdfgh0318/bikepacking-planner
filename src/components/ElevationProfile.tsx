@@ -77,7 +77,9 @@ export function ElevationProfile() {
           </div>
         )}
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="elevation-svg">
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="elevation-svg" role="img" aria-label={`Elevation profile chart: ${totalDist.toFixed(0)} km distance, ${minEle.toFixed(0)}m to ${maxEle.toFixed(0)}m elevation${routeStats ? `, +${routeStats.ascentM.toFixed(0)}m ascent, -${routeStats.descentM.toFixed(0)}m descent` : ''}`}>
+        <title>Route Elevation Profile</title>
+        <desc>Elevation chart showing terrain between {minEle.toFixed(0)}m and {maxEle.toFixed(0)}m over {totalDist.toFixed(0)} km{routeStats ? `. Total ascent: ${routeStats.ascentM.toFixed(0)}m, total descent: ${routeStats.descentM.toFixed(0)}m` : ''}.</desc>
         <defs>
           <linearGradient id="eleGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#4ade80" stopOpacity="0.6" />

@@ -43,6 +43,7 @@ function App() {
   const tripStartDate = useResupplyStore((s) => s.resupplyConfig.tripStartDate);
   const setRouteWeather = useResupplyStore((s) => s.setRouteWeather);
   const setIsLoadingWeather = useResupplyStore((s) => s.setIsLoadingWeather);
+  const routeWeather = useResupplyStore((s) => s.routeWeather);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -68,16 +69,19 @@ function App() {
       return;
     }
 
+    const controller = new AbortController();
+
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setIsCalculating(true);
       debugLog.info('route', 'calc:start', { waypointCount: waypoints.length, profile: routingProfile });
       try {
-        const { geometry, stats } = await calculateRoute(waypoints, routingProfile);
+        const { geometry, stats } = await calculateRoute(waypoints, routingProfile, controller.signal);
         setRouteGeometry(geometry);
         setRouteStats(stats);
         debugLog.info('route', 'calc:success', { distanceKm: stats.distanceKm, ascentM: stats.ascentM, points: geometry.coordinates.length });
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         const msg = err instanceof Error ? err.message : 'Using straight line between waypoints';
         debugLog.error('route', 'calc:fail', msg);
         toast.error('Route calculation failed', { description: msg });
@@ -87,11 +91,16 @@ function App() {
         };
         setRouteGeometry(geom);
       } finally {
-        setIsCalculating(false);
+        if (!controller.signal.aborted) {
+          setIsCalculating(false);
+        }
       }
     }, 500);
 
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      clearTimeout(debounceRef.current);
+      controller.abort();
+    };
   }, [waypoints, routingProfile, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
 
   // Fetch supply points when route or corridor changes
@@ -101,6 +110,7 @@ function App() {
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
 
     async function loadSupplyPoints() {
@@ -112,11 +122,11 @@ function App() {
         debugLog.debug('supply', 'fetch:bounds', bounds);
 
         const [paczkomatyRaw, shopsRaw, waterRaw, campsiteRaw, repairRaw] = await Promise.allSettled([
-          fetchPaczkomaty(bounds),
-          fetchShopsNearBbox(bounds),
-          fetchWaterSourcesNearBbox(bounds),
-          fetchCampsitesNearBbox(bounds),
-          fetchRepairShopsNearBbox(bounds),
+          fetchPaczkomaty(bounds, controller.signal),
+          fetchShopsNearBbox(bounds, controller.signal),
+          fetchWaterSourcesNearBbox(bounds, controller.signal),
+          fetchCampsitesNearBbox(bounds, controller.signal),
+          fetchRepairShopsNearBbox(bounds, controller.signal),
         ]);
 
         // Log each API result with raw counts
@@ -140,22 +150,33 @@ function App() {
 
         if (paczkomatyRaw.status === 'fulfilled') {
           for (const p of paczkomatyRaw.value) {
-            if (isPointInCorridor(p.location.latitude, p.location.longitude, corridor)) {
-              supplyPoints.push({
-                id: `inpost-${p.name}`,
-                name: p.name,
-                lat: p.location.latitude,
-                lng: p.location.longitude,
-                type: 'paczkomat',
-                distanceFromStartKm: getDistanceAlongRoute(
-                  routeGeometry!, p.location.latitude, p.location.longitude
-                ),
-                details: {
-                  address: `${p.address.line1}, ${p.address.line2}`,
-                  is24h: p.location_247,
-                  openingHours: p.opening_hours,
-                },
-              });
+            try {
+              const lat = p?.location?.latitude;
+              const lng = p?.location?.longitude;
+              if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) continue;
+              if (isPointInCorridor(lat, lng, corridor)) {
+                const addressStr = p.address
+                  ? `${p.address.line1 ?? ''}, ${p.address.line2 ?? ''}`.trim()
+                  : '';
+                supplyPoints.push({
+                  id: `inpost-${p.name}`,
+                  name: p.name || 'Paczkomat',
+                  lat,
+                  lng,
+                  type: 'paczkomat',
+                  distanceFromStartKm: getDistanceAlongRoute(
+                    routeGeometry!, lat, lng
+                  ),
+                  details: {
+                    address: addressStr,
+                    is24h: p.location_247,
+                    openingHours: p.opening_hours,
+                  },
+                });
+              }
+            } catch {
+              // Skip malformed paczkomat entry
+              continue;
             }
           }
         }
@@ -163,24 +184,31 @@ function App() {
         if (shopsRaw.status === 'fulfilled') {
           let shopsInCorridor = 0;
           for (const s of shopsRaw.value) {
-            if (isPointInCorridor(s.lat, s.lng, corridor)) {
-              shopsInCorridor++;
-              const type =
-                s.brand.toLowerCase().includes('żabka') || s.brand.toLowerCase().includes('zabka')
-                  ? 'zabka'
-                  : s.brand.toLowerCase().includes('biedronka')
-                    ? 'biedronka'
-                    : 'shop';
+            try {
+              if (typeof s.lat !== 'number' || typeof s.lng !== 'number' || isNaN(s.lat) || isNaN(s.lng)) continue;
+              if (isPointInCorridor(s.lat, s.lng, corridor)) {
+                shopsInCorridor++;
+                const brandLower = (s.brand || '').toLowerCase();
+                const type =
+                  brandLower.includes('żabka') || brandLower.includes('zabka')
+                    ? 'zabka'
+                    : brandLower.includes('biedronka')
+                      ? 'biedronka'
+                      : 'shop';
 
-              supplyPoints.push({
-                id: `shop-${s.id}`,
-                name: s.name,
-                lat: s.lat,
-                lng: s.lng,
-                type,
-                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, s.lat, s.lng),
-                details: { openingHours: s.openingHours },
-              });
+                supplyPoints.push({
+                  id: `shop-${s.id}`,
+                  name: s.name || 'Shop',
+                  lat: s.lat,
+                  lng: s.lng,
+                  type,
+                  distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, s.lat, s.lng),
+                  details: { openingHours: s.openingHours },
+                });
+              }
+            } catch {
+              // Skip malformed shop entry
+              continue;
             }
           }
           debugLog.info('supply', 'shops:corridor-filter', { raw: shopsRaw.value.length, inCorridor: shopsInCorridor });
@@ -188,57 +216,75 @@ function App() {
 
         if (waterRaw.status === 'fulfilled') {
           for (const w of waterRaw.value) {
-            if (isPointInCorridor(w.lat, w.lng, corridor)) {
-              supplyPoints.push({
-                id: `water-${w.id}`,
-                name: w.name,
-                lat: w.lat,
-                lng: w.lng,
-                type: 'water',
-                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, w.lat, w.lng),
-                details: { waterType: w.waterType },
-              });
+            try {
+              if (typeof w.lat !== 'number' || typeof w.lng !== 'number' || isNaN(w.lat) || isNaN(w.lng)) continue;
+              if (isPointInCorridor(w.lat, w.lng, corridor)) {
+                supplyPoints.push({
+                  id: `water-${w.id}`,
+                  name: w.name || 'Water source',
+                  lat: w.lat,
+                  lng: w.lng,
+                  type: 'water',
+                  distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, w.lat, w.lng),
+                  details: { waterType: w.waterType },
+                });
+              }
+            } catch {
+              // Skip malformed water entry
+              continue;
             }
           }
         }
 
         if (campsiteRaw.status === 'fulfilled') {
           for (const c of campsiteRaw.value) {
-            if (isPointInCorridor(c.lat, c.lng, corridor)) {
-              supplyPoints.push({
-                id: `camp-${c.id}`,
-                name: c.name,
-                lat: c.lat,
-                lng: c.lng,
-                type: 'campsite',
-                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, c.lat, c.lng),
-                details: {
-                  campsiteType: c.campsiteType,
-                  capacity: c.capacity,
-                  fee: c.fee,
-                  openingHours: c.openingHours,
-                },
-              });
+            try {
+              if (typeof c.lat !== 'number' || typeof c.lng !== 'number' || isNaN(c.lat) || isNaN(c.lng)) continue;
+              if (isPointInCorridor(c.lat, c.lng, corridor)) {
+                supplyPoints.push({
+                  id: `camp-${c.id}`,
+                  name: c.name || 'Campsite',
+                  lat: c.lat,
+                  lng: c.lng,
+                  type: 'campsite',
+                  distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, c.lat, c.lng),
+                  details: {
+                    campsiteType: c.campsiteType,
+                    capacity: c.capacity,
+                    fee: c.fee,
+                    openingHours: c.openingHours,
+                  },
+                });
+              }
+            } catch {
+              // Skip malformed campsite entry
+              continue;
             }
           }
         }
 
         if (repairRaw.status === 'fulfilled') {
           for (const r of repairRaw.value) {
-            if (isPointInCorridor(r.lat, r.lng, corridor)) {
-              supplyPoints.push({
-                id: `repair-${r.id}`,
-                name: r.name,
-                lat: r.lat,
-                lng: r.lng,
-                type: 'repair',
-                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, r.lat, r.lng),
-                details: {
-                  repairType: r.repairType,
-                  phone: r.phone,
-                  openingHours: r.openingHours,
-                },
-              });
+            try {
+              if (typeof r.lat !== 'number' || typeof r.lng !== 'number' || isNaN(r.lat) || isNaN(r.lng)) continue;
+              if (isPointInCorridor(r.lat, r.lng, corridor)) {
+                supplyPoints.push({
+                  id: `repair-${r.id}`,
+                  name: r.name || 'Repair',
+                  lat: r.lat,
+                  lng: r.lng,
+                  type: 'repair',
+                  distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, r.lat, r.lng),
+                  details: {
+                    repairType: r.repairType,
+                    phone: r.phone,
+                    openingHours: r.openingHours,
+                  },
+                });
+              }
+            } catch {
+              // Skip malformed repair entry
+              continue;
             }
           }
         }
@@ -273,6 +319,7 @@ function App() {
           }
         }
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         debugLog.error('supply', 'fetch:error', err instanceof Error ? err.message : String(err));
         toast.error('Failed to load supply points', { description: 'Check your connection and try again' });
       } finally {
@@ -283,7 +330,7 @@ function App() {
     }
 
     loadSupplyPoints();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [routeGeometry, corridorWidthKm, dailyTargetKm, setSupplyPoints, setIsLoading, setDaySegments]);
 
   // Fetch bail-out points when enabled and route exists
@@ -293,28 +340,35 @@ function App() {
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
 
     async function loadBailOut() {
       try {
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 5); // wider corridor for bail-out
-        const bailOutRaw = await fetchBailOutPointsNearBbox(bounds);
+        const bailOutRaw = await fetchBailOutPointsNearBbox(bounds, controller.signal);
         if (cancelled) return;
 
         const corridor = bufferRoute(routeGeometry!, corridorWidthKm + 5);
         const points: SupplyPoint[] = [];
 
         for (const b of bailOutRaw) {
-          if (isPointInCorridor(b.lat, b.lng, corridor)) {
-            points.push({
-              id: `bailout-${b.id}`,
-              name: b.name,
-              lat: b.lat,
-              lng: b.lng,
-              type: b.bailOutType,
-              distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, b.lat, b.lng),
-              details: { phone: b.phone },
-            });
+          try {
+            if (typeof b.lat !== 'number' || typeof b.lng !== 'number' || isNaN(b.lat) || isNaN(b.lng)) continue;
+            if (isPointInCorridor(b.lat, b.lng, corridor)) {
+              points.push({
+                id: `bailout-${b.id}`,
+                name: b.name || 'Bail-out point',
+                lat: b.lat,
+                lng: b.lng,
+                type: b.bailOutType,
+                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, b.lat, b.lng),
+                details: { phone: b.phone },
+              });
+            }
+          } catch {
+            // Skip malformed bail-out entry
+            continue;
           }
         }
 
@@ -324,12 +378,13 @@ function App() {
           debugLog.info('bailout', 'points:loaded', { total: points.length });
         }
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         debugLog.error('bailout', 'fetch:error', err instanceof Error ? err.message : String(err));
       }
     }
 
     loadBailOut();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [routeGeometry, showBailOut, corridorWidthKm, setBailOutPoints]);
 
   // Fetch weather forecast when route and trip date are available
@@ -339,13 +394,14 @@ function App() {
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
     setIsLoadingWeather(true);
 
     async function loadWeather() {
       try {
         debugLog.info('weather', 'fetch:start', { tripStartDate, days: daySegments.length });
-        const weather = await fetchRouteWeather(routeGeometry!, daySegments, tripStartDate);
+        const weather = await fetchRouteWeather(routeGeometry!, daySegments, tripStartDate, controller.signal);
         if (!cancelled) {
           setRouteWeather(weather);
           const available = weather.days.filter(d => d.weatherCode !== -1).length;
@@ -356,6 +412,7 @@ function App() {
           });
         }
       } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
         debugLog.error('weather', 'fetch:error', err instanceof Error ? err.message : String(err));
       } finally {
         if (!cancelled) setIsLoadingWeather(false);
@@ -363,8 +420,25 @@ function App() {
     }
 
     loadWeather();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [routeGeometry, daySegments, tripStartDate, setRouteWeather, setIsLoadingWeather]);
+
+  // Re-analyze water gaps when weather data arrives (heat-adjusted thresholds)
+  useEffect(() => {
+    if (!routeWeather) return;
+    const supplyPoints = useSupplyStore.getState().supplyPoints;
+    const routeStats = useRouteStore.getState().routeStats;
+    const totalDistKm = routeStats?.distanceKm ?? 0;
+    if (supplyPoints.length === 0 || totalDistKm <= 0) return;
+    const maxTempC = Math.max(...routeWeather.days.map(d => d.tempMax));
+    if (maxTempC <= 30) return; // no adjustment needed
+    const wGaps = analyzeWaterGaps(supplyPoints, totalDistKm, maxTempC);
+    setWaterGaps(wGaps);
+    debugLog.info('supply', 'waterGaps:heat-adjusted', {
+      maxTempC, waterGaps: wGaps.length,
+      waterDangers: wGaps.filter(g => g.severity === 'danger').length,
+    });
+  }, [routeWeather, setWaterGaps]);
 
   return (
     <div className="app">

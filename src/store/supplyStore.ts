@@ -46,7 +46,7 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   setSupplyPoints: (pts) => set({ supplyPoints: pts }),
   setSupplyGaps: (gaps) => set({ supplyGaps: gaps }),
   setWaterGaps: (gaps) => set({ waterGaps: gaps }),
-  setCorridorWidthKm: (km) => set({ corridorWidthKm: km }),
+  setCorridorWidthKm: (km) => set({ corridorWidthKm: Math.max(0.5, Math.min(20, km)) }),
   setShowPaczkomaty: (v) => set({ showPaczkomaty: v }),
   setShowShops: (v) => set({ showShops: v }),
   setShowWater: (v) => set({ showWater: v }),

@@ -13,10 +13,10 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }
   repair: { icon: 'R', color: '#facc15', label: 'Repair' },
 };
 
-const GAP_COLORS: Record<GapSeverity, { bg: string; text: string }> = {
-  safe: { bg: 'rgba(74, 222, 128, 0.1)', text: '#4ade80' },
-  caution: { bg: 'rgba(251, 191, 36, 0.1)', text: '#fbbf24' },
-  danger: { bg: 'rgba(248, 113, 113, 0.1)', text: '#f87171' },
+const GAP_COLORS: Record<GapSeverity, { bg: string; text: string; label: string }> = {
+  safe: { bg: 'rgba(74, 222, 128, 0.1)', text: '#4ade80', label: 'Safe' },
+  caution: { bg: 'rgba(251, 191, 36, 0.1)', text: '#fbbf24', label: 'Caution' },
+  danger: { bg: 'rgba(248, 113, 113, 0.1)', text: '#f87171', label: 'Danger' },
 };
 
 export function SupplyPanel() {
@@ -95,6 +95,7 @@ export function SupplyPanel() {
                   key={i}
                   className="supply-gap-item"
                   style={{ background: colors.bg, borderColor: colors.text }}
+                  aria-label={`${colors.label}: ${gap.distanceKm.toFixed(0)} km gap from ${gap.fromName} to ${gap.toName}`}
                 >
                   <div className="supply-gap-distance" style={{ color: colors.text }}>
                     {gap.distanceKm.toFixed(0)} km
@@ -102,8 +103,8 @@ export function SupplyPanel() {
                   <div className="supply-gap-names">
                     {gap.fromName} → {gap.toName}
                   </div>
-                  <span className="supply-gap-severity" style={{ color: colors.text }}>
-                    {gap.severity}
+                  <span className="supply-gap-severity" style={{ color: colors.text }} aria-label={`Severity: ${colors.label}`}>
+                    {colors.label}
                   </span>
                 </div>
               );
@@ -127,6 +128,7 @@ export function SupplyPanel() {
                   key={i}
                   className="supply-gap-item"
                   style={{ background: colors.bg, borderColor: colors.text }}
+                  aria-label={`${colors.label}: ${gap.distanceKm.toFixed(0)} km water gap from ${gap.fromName} to ${gap.toName}`}
                 >
                   <div className="supply-gap-distance" style={{ color: colors.text }}>
                     {gap.distanceKm.toFixed(0)} km
@@ -134,8 +136,8 @@ export function SupplyPanel() {
                   <div className="supply-gap-names">
                     {gap.fromName} → {gap.toName}
                   </div>
-                  <span className="supply-gap-severity" style={{ color: colors.text }}>
-                    {gap.severity}
+                  <span className="supply-gap-severity" style={{ color: colors.text }} aria-label={`Severity: ${colors.label}`}>
+                    {colors.label}
                   </span>
                 </div>
               );

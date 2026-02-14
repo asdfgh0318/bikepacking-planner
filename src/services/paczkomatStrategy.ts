@@ -28,6 +28,12 @@ function addDays(dateStr: string, days: number): string {
 /**
  * Score a Paczkomat for pre-shipping suitability.
  * Higher score = better choice.
+ *
+ * Weight priorities (bikepacking context):
+ *   1. Near night stop  — highest (you pick up parcels when you stop for the night)
+ *   2. 24/7 access      — secondary (nice-to-have, not critical if near camp)
+ *   3. Locker size      — minor tiebreaker
+ *   4. Too close to start — penalty (no resupply needed on day 1)
  */
 function scorePaczkomat(
   paczkomat: SupplyPoint,
@@ -36,21 +42,29 @@ function scorePaczkomat(
 ): number {
   let score = 0;
 
-  // Prefer 24/7 access
-  if (config.prefer24h && paczkomat.details?.is24h) {
-    score += 10;
+  // Penalty: Paczkomaty within first 30 km of the route are useless —
+  // you start fully stocked and don't need a resupply on day 1.
+  if (paczkomat.distanceFromStartKm < 30) {
+    score -= 10;
   }
 
-  // Prefer near night stop (end of day) — within 10km of segment end
+  // Prefer near night stop (end of day) — within 10 km of segment end.
+  // This is the most important factor: you collect parcels when you
+  // set up camp, not while riding.
   if (config.preferNearNightStop) {
     const distFromEnd = Math.abs(paczkomat.distanceFromStartKm - daySegment.endKm);
-    if (distFromEnd < 5) score += 8;
-    else if (distFromEnd < 10) score += 5;
+    if (distFromEnd < 5) score += 14;
+    else if (distFromEnd < 10) score += 9;
   }
 
-  // Prefer Paczkomaty with larger lockers
+  // Prefer 24/7 access — helpful but secondary to night-stop proximity
+  if (config.prefer24h && paczkomat.details?.is24h) {
+    score += 7;
+  }
+
+  // Minor preference for Paczkomaty with larger lockers
   if (paczkomat.details?.lockerSize?.some((s) => s === 'C' || s === 'L')) {
-    score += 3;
+    score += 2;
   }
 
   return score;

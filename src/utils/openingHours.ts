@@ -37,11 +37,29 @@ function expandDayRange(range: string): number[] {
   return days;
 }
 
+function parseTimeRanges(timeSpec: string): Array<{ open: number; close: number }> {
+  // Handle comma-separated time ranges: "09:00-13:00,15:00-21:00"
+  const segments = timeSpec.split(',').map((s) => s.trim()).filter(Boolean);
+  const result: Array<{ open: number; close: number }> = [];
+  for (const seg of segments) {
+    const m = seg.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (!m) return [];
+    result.push({ open: parseTime(m[1]), close: parseTime(m[2]) });
+  }
+  return result;
+}
+
+function is24_7String(s: string): boolean {
+  const norm = s.toUpperCase().replace(/\s+/g, ' ').trim();
+  // "24/7", "24h", "24H", "OPEN 24H", "OPEN 24/7", "24 HOURS" etc.
+  return /^(OPEN\s+)?(24\s*\/\s*7|24\s*H(OURS?)?)$/i.test(norm);
+}
+
 export function parseOpeningHours(raw: string): ParsedSchedule | null {
   if (!raw) return null;
 
   const trimmed = raw.trim();
-  if (trimmed === '24/7') return { is24_7: true, ranges: [] };
+  if (is24_7String(trimmed)) return { is24_7: true, ranges: [] };
 
   const ranges: TimeRange[] = [];
 
@@ -49,11 +67,17 @@ export function parseOpeningHours(raw: string): ParsedSchedule | null {
   const parts = trimmed.split(';').map((s) => s.trim()).filter(Boolean);
 
   for (const part of parts) {
+    // Skip keyword-only entries like "Tu closed", "Mo open", "PH off"
+    if (/^[A-Za-z,\-]+\s+(open|closed|off)$/i.test(part)) continue;
+
     // Match "Mo-Fr 06:00-22:00" or "Sa 07:00-21:00" or "Mo,We,Fr 08:00-16:00"
-    const match = part.match(/^([A-Za-z,\-]+)\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    // Also handles comma-separated time ranges: "Mo-Fr 09:00-13:00,15:00-21:00"
+    const match = part.match(
+      /^([A-Za-z,\-]+)\s+([\d:,\-\s]+)$/
+    );
     if (!match) return null;
 
-    const [, daySpec, openStr, closeStr] = match;
+    const [, daySpec, timeSpec] = match;
     const dayParts = daySpec.split(',');
     const days: number[] = [];
     for (const dp of dayParts) {
@@ -61,11 +85,12 @@ export function parseOpeningHours(raw: string): ParsedSchedule | null {
     }
     if (days.length === 0) return null;
 
-    ranges.push({
-      days,
-      open: parseTime(openStr),
-      close: parseTime(closeStr),
-    });
+    const timeRanges = parseTimeRanges(timeSpec);
+    if (timeRanges.length === 0) return null;
+
+    for (const tr of timeRanges) {
+      ranges.push({ days, open: tr.open, close: tr.close });
+    }
   }
 
   return ranges.length > 0 ? { is24_7: false, ranges } : null;

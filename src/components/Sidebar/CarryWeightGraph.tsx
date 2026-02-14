@@ -5,12 +5,14 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
   if (curve.length < 2) return null;
 
   const totalDist = curve[curve.length - 1].distanceKm;
-  const maxWeight = Math.max(500, ...curve.map((p) => p.foodWeightG));
+  const rawMax = curve.length > 0 ? Math.max(...curve.map((p) => p.foodWeightG)) : 0;
+  // Round up to nearest 500g for a clean scale, minimum 3000g default when no meaningful data
+  const maxWeight = rawMax > 0 ? Math.ceil(rawMax / 500) * 500 : 3000;
 
   // SVG dimensions
   const w = 1000;
   const h = 160;
-  const pad = { top: 10, bottom: 24, left: 0, right: 0 };
+  const pad = { top: 10, bottom: 24, left: 44, right: 0 };
   const chartW = w - pad.left - pad.right;
   const chartH = h - pad.top - pad.bottom;
 
@@ -27,12 +29,16 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
     ` L${toX(totalDist).toFixed(1)},${(pad.top + chartH).toFixed(1)}` +
     ` L${pad.left},${(pad.top + chartH).toFixed(1)} Z`;
 
-  // Weight zone thresholds
-  const zones = [
-    { weight: 1000, color: 'rgba(74, 222, 128, 0.08)', label: '1 kg' },
-    { weight: 2000, color: 'rgba(251, 191, 36, 0.08)', label: '2 kg' },
-    { weight: 3000, color: 'rgba(248, 113, 113, 0.08)', label: '3 kg' },
-  ];
+  // Weight zone thresholds — dynamically spaced based on maxWeight
+  const zoneStep = maxWeight <= 1500 ? 500 : 1000;
+  const zones: { weight: number; color: string; label: string }[] = [];
+  for (let wt = zoneStep; wt < maxWeight; wt += zoneStep) {
+    zones.push({
+      weight: wt,
+      color: 'rgba(255,255,255,0.08)',
+      label: wt >= 1000 ? `${(wt / 1000).toFixed(wt % 1000 === 0 ? 0 : 1)} kg` : `${wt}g`,
+    });
+  }
 
   // Day separators
   const dayBreaks: number[] = [];
@@ -58,10 +64,30 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
           </linearGradient>
         </defs>
 
+        {/* Y-axis scale labels: 0g at bottom, max at top */}
+        <text
+          x={pad.left - 6}
+          y={pad.top + chartH}
+          fill="rgba(255,255,255,0.4)"
+          fontSize="11"
+          textAnchor="end"
+          dominantBaseline="auto"
+        >
+          0g
+        </text>
+        <text
+          x={pad.left - 6}
+          y={pad.top}
+          fill="rgba(255,255,255,0.4)"
+          fontSize="11"
+          textAnchor="end"
+          dominantBaseline="hanging"
+        >
+          {maxWeight >= 1000 ? `${(maxWeight / 1000).toFixed(maxWeight % 1000 === 0 ? 0 : 1)} kg` : `${maxWeight}g`}
+        </text>
+
         {/* Weight zone lines */}
-        {zones
-          .filter((z) => z.weight <= maxWeight)
-          .map((z, i) => (
+        {zones.map((z, i) => (
             <g key={i}>
               <line
                 x1={pad.left}
