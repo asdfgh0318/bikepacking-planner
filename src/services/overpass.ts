@@ -182,3 +182,61 @@ export async function fetchCampsitesNearBbox(bounds: {
     };
   }).filter(Boolean) as CampsitePoint[];
 }
+
+export interface RepairPoint {
+  id: number;
+  lat: number;
+  lng: number;
+  name: string;
+  repairType: 'shop' | 'repair_station';
+  phone?: string;
+  openingHours?: string;
+}
+
+export async function fetchRepairShopsNearBbox(bounds: {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}): Promise<RepairPoint[]> {
+  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+
+  const query = `
+    [out:json][timeout:25];
+    (
+      node["shop"="bicycle"](${bbox});
+      way["shop"="bicycle"](${bbox});
+      node["amenity"="bicycle_repair_station"](${bbox});
+    );
+    out center;
+  `;
+
+  const res = await fetch(OVERPASS_API, {
+    method: 'POST',
+    body: `data=${encodeURIComponent(query)}`,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Overpass error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return (data.elements as OverpassElement[]).map((el) => {
+    const lat = el.lat || (el as any).center?.lat;
+    const lon = el.lon || (el as any).center?.lon;
+    if (!lat || !lon) return null;
+
+    const isStation = el.tags.amenity === 'bicycle_repair_station';
+
+    return {
+      id: el.id,
+      lat,
+      lng: lon,
+      name: el.tags.name || (isStation ? 'Repair station' : 'Bike shop'),
+      repairType: isStation ? 'repair_station' as const : 'shop' as const,
+      phone: el.tags.phone || el.tags['contact:phone'],
+      openingHours: el.tags.opening_hours,
+    };
+  }).filter(Boolean) as RepairPoint[];
+}

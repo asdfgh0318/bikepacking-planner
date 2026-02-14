@@ -1,5 +1,26 @@
 import * as turf from '@turf/turf';
-import type { DaySegment, SupplyPoint } from '../types';
+import type { DaySegment, Difficulty, SupplyPoint } from '../types';
+
+/**
+ * Estimate ride time in hours for a bikepacking day.
+ * Based on Naismith's rule adapted for loaded touring bikes:
+ * - Base speed: ~15 km/h on flat (loaded touring)
+ * - Add 1 hour per 400m ascent (steep terrain penalty)
+ * - Add 15 min break per 2 hours riding
+ */
+function estimateRideHours(distanceKm: number, ascentM: number): number {
+  const flatHours = distanceKm / 15;
+  const climbHours = ascentM / 400;
+  const ridingHours = flatHours + climbHours;
+  const breakHours = Math.floor(ridingHours / 2) * 0.25;
+  return ridingHours + breakHours;
+}
+
+function getDifficulty(hours: number, ascentM: number): Difficulty {
+  if (hours <= 4.5 && ascentM < 600) return 'easy';
+  if (hours <= 7 && ascentM < 1200) return 'moderate';
+  return 'hard';
+}
 
 /**
  * Split a route into daily segments.
@@ -58,16 +79,21 @@ export function splitRouteIntoDays(
       (sp) => sp.distanceFromStartKm >= currentKm && sp.distanceFromStartKm <= bestEnd
     );
 
+    const segDist = bestEnd - currentKm;
+    const hours = estimateRideHours(segDist, ascent);
+
     days.push({
       dayNumber: dayNum,
       startKm: currentKm,
       endKm: bestEnd,
-      distanceKm: bestEnd - currentKm,
+      distanceKm: segDist,
       ascentM: ascent,
       descentM: descent,
       startCoord: startPoint.geometry.coordinates as [number, number],
       endCoord: endPoint.geometry.coordinates as [number, number],
       supplyStops: segmentSupply,
+      estimatedHours: hours,
+      difficulty: getDifficulty(hours, ascent),
     });
 
     currentKm = bestEnd;

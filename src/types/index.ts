@@ -46,7 +46,7 @@ export interface SupplyPoint {
   name: string;
   lat: number;
   lng: number;
-  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite';
+  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite' | 'repair';
   distanceFromStartKm: number;
   details?: {
     address?: string;
@@ -57,10 +57,14 @@ export interface SupplyPoint {
     campsiteType?: 'camp_site' | 'shelter' | 'wilderness_hut' | 'bivouac';
     capacity?: string;
     fee?: boolean;
+    repairType?: 'shop' | 'repair_station';
+    phone?: string;
   };
 }
 
 // Day Splitting
+export type Difficulty = 'easy' | 'moderate' | 'hard';
+
 export interface DaySegment {
   dayNumber: number;
   startKm: number;
@@ -71,4 +75,6 @@ export interface DaySegment {
   startCoord: [number, number]; // [lng, lat]
   endCoord: [number, number];
   supplyStops: SupplyPoint[];
+  estimatedHours: number;
+  difficulty: Difficulty;
 }

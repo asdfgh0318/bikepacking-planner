@@ -10,6 +10,7 @@ const ICONS: Record<string, string> = {
   shop: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1e40af" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
   water: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0c4a6e" stroke-width="2.5"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
   campsite: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#5b21b6" stroke-width="2.5"><path d="M12 2L2 22h20L12 2z"/><path d="M12 14v4"/></svg>`,
+  repair: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#854d0e" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
 };
 
 const COLORS: Record<string, { bg: string; border: string }> = {
@@ -19,6 +20,7 @@ const COLORS: Record<string, { bg: string; border: string }> = {
   shop: { bg: '#60a5fa', border: '#1e40af' },
   water: { bg: '#38bdf8', border: '#0c4a6e' },
   campsite: { bg: '#c084fc', border: '#5b21b6' },
+  repair: { bg: '#facc15', border: '#854d0e' },
 };
 
 function createSupplyIcon(type: string) {
@@ -54,6 +56,7 @@ const TYPE_LABELS: Record<string, string> = {
   shop: 'Shop',
   water: 'Water Source',
   campsite: 'Campsite',
+  repair: 'Bike Repair',
 };
 
 export function SupplyMarkers() {
@@ -62,12 +65,14 @@ export function SupplyMarkers() {
   const showShops = useSupplyStore((s) => s.showShops);
   const showWater = useSupplyStore((s) => s.showWater);
   const showCampsites = useSupplyStore((s) => s.showCampsites);
+  const showRepair = useSupplyStore((s) => s.showRepair);
 
   const visible = supplyPoints.filter((p) => {
     if (p.type === 'paczkomat' && !showPaczkomaty) return false;
     if (p.type === 'water' && !showWater) return false;
     if (p.type === 'campsite' && !showCampsites) return false;
-    if (p.type !== 'paczkomat' && p.type !== 'water' && p.type !== 'campsite' && !showShops) return false;
+    if (p.type === 'repair' && !showRepair) return false;
+    if (!['paczkomat', 'water', 'campsite', 'repair'].includes(p.type) && !showShops) return false;
     return true;
   });
 
@@ -90,6 +95,12 @@ export function SupplyMarkers() {
                 <div style={{ fontSize: 12, color: '#c084fc', marginTop: 4 }}>
                   {pt.details.campsiteType.replace('_', ' ')}
                   {pt.details.capacity && ` · ${pt.details.capacity} spots`}
+                </div>
+              )}
+              {pt.details?.repairType && (
+                <div style={{ fontSize: 12, color: '#facc15', marginTop: 4 }}>
+                  {pt.details.repairType === 'repair_station' ? 'Self-service station' : 'Bike shop'}
+                  {pt.details.phone && ` · ${pt.details.phone}`}
                 </div>
               )}
               {pt.details?.address && (

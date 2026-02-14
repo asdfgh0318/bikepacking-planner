@@ -6,7 +6,7 @@ import { useRouteStore } from './store/routeStore';
 import { useSupplyStore } from './store/supplyStore';
 import { calculateRoute } from './services/brouter';
 import { fetchPaczkomaty } from './services/inpost';
-import { fetchShopsNearBbox, fetchWaterSourcesNearBbox, fetchCampsitesNearBbox } from './services/overpass';
+import { fetchShopsNearBbox, fetchWaterSourcesNearBbox, fetchCampsitesNearBbox, fetchRepairShopsNearBbox } from './services/overpass';
 import { splitRouteIntoDays } from './services/daySplitter';
 import { decodeRouteFromHash } from './services/routeStorage';
 import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from './utils/geo';
@@ -89,11 +89,12 @@ function App() {
         const corridor = bufferRoute(routeGeometry!, corridorWidthKm);
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
 
-        const [paczkomatyRaw, shopsRaw, waterRaw, campsiteRaw] = await Promise.allSettled([
+        const [paczkomatyRaw, shopsRaw, waterRaw, campsiteRaw, repairRaw] = await Promise.allSettled([
           fetchPaczkomaty(bounds),
           fetchShopsNearBbox(bounds),
           fetchWaterSourcesNearBbox(bounds),
           fetchCampsitesNearBbox(bounds),
+          fetchRepairShopsNearBbox(bounds),
         ]);
 
         if (cancelled) return;
@@ -176,6 +177,26 @@ function App() {
                   capacity: c.capacity,
                   fee: c.fee,
                   openingHours: c.openingHours,
+                },
+              });
+            }
+          }
+        }
+
+        if (repairRaw.status === 'fulfilled') {
+          for (const r of repairRaw.value) {
+            if (isPointInCorridor(r.lat, r.lng, corridor)) {
+              supplyPoints.push({
+                id: `repair-${r.id}`,
+                name: r.name,
+                lat: r.lat,
+                lng: r.lng,
+                type: 'repair',
+                distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, r.lat, r.lng),
+                details: {
+                  repairType: r.repairType,
+                  phone: r.phone,
+                  openingHours: r.openingHours,
                 },
               });
             }

@@ -48,6 +48,12 @@ export function RoutePanel() {
                 <span className="stat-value down">{routeStats.descentM.toFixed(0)}</span>
                 <span className="stat-label">m down</span>
               </div>
+              {daySegments.length > 0 && (
+                <div className="stat-card">
+                  <span className="stat-value">{daySegments.length}</span>
+                  <span className="stat-label">days</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -88,10 +94,16 @@ export function RoutePanel() {
               <ul className="day-list">
                 {daySegments.map((seg) => (
                   <li key={seg.dayNumber} className="day-item">
-                    <div className="day-badge">D{seg.dayNumber}</div>
+                    <div className={`day-badge day-${seg.difficulty}`}>D{seg.dayNumber}</div>
                     <div className="day-info">
                       <div className="day-stats">
                         <span className="day-dist">{seg.distanceKm.toFixed(0)} km</span>
+                        <span className="day-time">
+                          {Math.floor(seg.estimatedHours)}h{Math.round((seg.estimatedHours % 1) * 60).toString().padStart(2, '0')}
+                        </span>
+                        <span className={`day-difficulty ${seg.difficulty}`}>{seg.difficulty}</span>
+                      </div>
+                      <div className="day-stats-secondary">
                         {seg.ascentM > 0 && (
                           <span className="day-ele up">+{seg.ascentM.toFixed(0)}m</span>
                         )}

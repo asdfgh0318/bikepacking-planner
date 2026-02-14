@@ -12,9 +12,12 @@ import {
 export function SavedRoutes() {
   const waypoints = useRouteStore((s) => s.waypoints);
   const routeStats = useRouteStore((s) => s.routeStats);
+  const routeGeometry = useRouteStore((s) => s.routeGeometry);
+  const daySegments = useRouteStore((s) => s.daySegments);
   const dailyTargetKm = useRouteStore((s) => s.dailyTargetKm);
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
+  const supplyPoints = useSupplyStore((s) => s.supplyPoints);
 
   const [routes, setRoutes] = useState<SavedRoute[]>(() => getSavedRoutes());
   const [saveName, setSaveName] = useState('');
@@ -48,6 +51,29 @@ export function SavedRoutes() {
     });
   }, [waypoints, saveName]);
 
+  const handleDownloadPackage = useCallback(() => {
+    if (!routeGeometry || waypoints.length < 2) return;
+    const pkg = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      name: saveName.trim() || 'Bikepacking Route',
+      waypoints,
+      routeGeometry,
+      routeStats,
+      dailyTargetKm,
+      corridorWidthKm,
+      daySegments,
+      supplyPoints,
+    };
+    const blob = new Blob([JSON.stringify(pkg, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(saveName.trim() || 'bikepacking-route').replace(/\s+/g, '-').toLowerCase()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [waypoints, routeGeometry, routeStats, daySegments, supplyPoints, dailyTargetKm, corridorWidthKm, saveName]);
+
   return (
     <div className="saved-routes">
       {/* Save current route */}
@@ -73,6 +99,16 @@ export function SavedRoutes() {
             </svg>
             {copied ? 'Link copied!' : 'Copy share link'}
           </button>
+          {routeGeometry && (
+            <button className="btn btn-download" onClick={handleDownloadPackage}>
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download offline package
+            </button>
+          )}
         </div>
       )}
 

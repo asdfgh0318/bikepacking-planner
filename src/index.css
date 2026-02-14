@@ -745,6 +745,35 @@ html, body, #root {
 .day-ele.up { color: var(--green); }
 .day-ele.down { color: var(--red); }
 
+.day-stats-secondary {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 1px;
+}
+
+.day-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.day-difficulty {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.day-difficulty.easy { color: var(--green); background: rgba(74, 222, 128, 0.12); }
+.day-difficulty.moderate { color: var(--yellow); background: rgba(251, 191, 36, 0.12); }
+.day-difficulty.hard { color: var(--red); background: rgba(248, 113, 113, 0.12); }
+
+.day-badge.day-easy { background: rgba(74, 222, 128, 0.12); color: var(--green); }
+.day-badge.day-moderate { background: rgba(251, 191, 36, 0.12); color: var(--yellow); }
+.day-badge.day-hard { background: rgba(248, 113, 113, 0.12); color: var(--red); }
+
 .day-stops {
   font-size: 11px;
   color: var(--text-muted);
@@ -829,6 +858,24 @@ html, body, #root {
   cursor: pointer;
 }
 .btn-share:hover { background: rgba(96, 165, 250, 0.2); }
+
+.btn-download {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(192, 132, 252, 0.1);
+  color: #c084fc;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.btn-download:hover { background: rgba(192, 132, 252, 0.2); }
 
 .saved-list {
   list-style: none;

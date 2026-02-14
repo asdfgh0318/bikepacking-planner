@@ -7,6 +7,7 @@ const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }
   shop: { icon: 'S', color: '#60a5fa', label: 'Shop' },
   water: { icon: 'W', color: '#38bdf8', label: 'Water' },
   campsite: { icon: 'C', color: '#c084fc', label: 'Campsite' },
+  repair: { icon: 'R', color: '#facc15', label: 'Repair' },
 };
 
 export function SupplyPanel() {
@@ -99,6 +100,12 @@ export function SupplyPanel() {
                   <div className="supply-item-address">
                     {pt.details.campsiteType.replace('_', ' ')}
                     {pt.details.fee === false && ' · free'}
+                  </div>
+                )}
+                {pt.details?.repairType && (
+                  <div className="supply-item-address">
+                    {pt.details.repairType === 'repair_station' ? 'self-service' : 'bike shop'}
+                    {pt.details.phone && ` · ${pt.details.phone}`}
                   </div>
                 )}
                 {pt.details?.address && (
