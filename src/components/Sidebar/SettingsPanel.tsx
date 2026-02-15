@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from 'react';
 import { toast } from 'sonner';
 import { useSupplyStore } from '../../store/supplyStore';
 import { useResupplyStore, SEASON_DEFAULTS } from '../../store/resupplyStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { Toggle, RangeSlider } from '../ui';
 import { debugLog } from '../../utils/debugLogger';
 import type { Season } from '../../types';
@@ -25,6 +26,8 @@ function useDebugLog() {
 export function SettingsPanel() {
   const logCount = useDebugLog();
   const [showRecent, setShowRecent] = useState(false);
+  const theme = useSettingsStore((s) => s.theme);
+  const toggleTheme = useSettingsStore((s) => s.toggleTheme);
 
   const tripContext = useResupplyStore((s) => s.tripContext);
   const setSeason = useResupplyStore((s) => s.setSeason);
@@ -64,6 +67,11 @@ export function SettingsPanel() {
 
   return (
     <div className="panel">
+      <div className="section-label">Appearance</div>
+      <div className="setting-card">
+        <Toggle checked={theme === 'light'} onChange={toggleTheme} label="Light Mode" color="#60a5fa" />
+      </div>
+
       <div className="section-label">Search Corridor</div>
       <RangeSlider
         label="Corridor width"

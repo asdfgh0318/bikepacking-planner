@@ -5,15 +5,24 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { ElevationProfile } from './components/ElevationProfile';
 import { Wizard } from './components/Wizard';
 import { useRouteStore } from './store/routeStore';
+import { useSettingsStore } from './store/settingsStore';
 import { decodeRouteFromHash } from './services/routeStorage';
 import { useRouteCalculation } from './hooks/useRouteCalculation';
 import { useSupplyPointFetching } from './hooks/useSupplyPointFetching';
+import { useSurfaceFetching } from './hooks/useSurfaceFetching';
 import { useWeatherFetching } from './hooks/useWeatherFetching';
 import { useGapAnalysis } from './hooks/useGapAnalysis';
 import { useBailOutFetching } from './hooks/useBailOutFetching';
+import { useMountainPasses } from './hooks/useMountainPasses';
 
 function App() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
+  const theme = useSettingsStore((s) => s.theme);
+
+  // Apply theme on mount and when it changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Load shared route from URL hash on mount
   useEffect(() => {
@@ -34,6 +43,9 @@ function App() {
   // Fetch supply points (shops, water, campsites, paczkomaty, repair)
   useSupplyPointFetching();
 
+  // Fetch surface quality data from Overpass
+  useSurfaceFetching();
+
   // Fetch bail-out points (train stations, hospitals)
   useBailOutFetching();
 
@@ -43,10 +55,13 @@ function App() {
   // Re-analyze water gaps when weather data arrives (heat-adjusted)
   useGapAnalysis();
 
+  // Fetch mountain passes from Wikidata for elevation profile labels
+  useMountainPasses();
+
   return (
     <div className="app">
       <Toaster
-        theme="dark"
+        theme={theme}
         position="top-center"
         toastOptions={{
           style: {

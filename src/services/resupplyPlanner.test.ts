@@ -469,6 +469,169 @@ describe('generateResupplyPlan', () => {
     });
   });
 
+  // ─── Trading Sunday Exceptions ──────────────────────────────────────
+
+  describe('trading Sunday exceptions', () => {
+    it('does NOT skip Biedronka on a trading Sunday', () => {
+      // 2026-01-25 is a Sunday AND a trading Sunday
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('bied', 30, 'biedronka'),
+        makeSupplyPoint('zab', 35, 'zabka'),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-01-25', // Trading Sunday
+      });
+
+      const plan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        config
+      );
+
+      // Biedronka SHOULD appear in purchases on a trading Sunday
+      const biedPurchase = plan.purchases.find((p) => p.stopType === 'biedronka');
+      expect(biedPurchase).toBeDefined();
+    });
+
+    it('still skips Biedronka on a non-trading Sunday', () => {
+      // 2026-07-12 is a regular (non-trading) Sunday
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('bied', 30, 'biedronka'),
+        makeSupplyPoint('zab', 35, 'zabka'),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-07-12', // Non-trading Sunday
+      });
+
+      const plan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        config
+      );
+
+      // Biedronka should NOT appear — it's a regular Sunday
+      const biedPurchase = plan.purchases.find((p) => p.stopType === 'biedronka');
+      expect(biedPurchase).toBeUndefined();
+    });
+
+    it('does NOT add Sunday food buffer on a trading Sunday', () => {
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 40, ascentM: 100 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('zab', 15, 'zabka'),
+      ];
+
+      // Weekday (Monday)
+      const mondayConfig = makeConfig({
+        tripStartDate: '2026-07-06', // Monday
+      });
+      const mondayPlan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        mondayConfig
+      );
+
+      // Trading Sunday — should behave like a weekday
+      const tradingSundayConfig = makeConfig({
+        tripStartDate: '2026-01-25', // Trading Sunday
+      });
+      const tradingSundayPlan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        tradingSundayConfig
+      );
+
+      // Trading Sunday should NOT have extra buffer, so calories should be the same as Monday
+      expect(tradingSundayPlan.totalCalories).toBe(mondayPlan.totalCalories);
+    });
+
+    it('generates sunday_trading info warning instead of sunday_closed warning on trading Sunday', () => {
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('bied', 30, 'biedronka'),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-01-25', // Trading Sunday
+      });
+
+      const plan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        config
+      );
+
+      // Should NOT have sunday_closed warning
+      const closedWarning = plan.warnings.find((w) => w.type === 'sunday_closed');
+      expect(closedWarning).toBeUndefined();
+
+      // Should have sunday_trading info warning
+      const tradingWarning = plan.warnings.find((w) => w.type === 'sunday_trading');
+      expect(tradingWarning).toBeDefined();
+      expect(tradingWarning!.severity).toBe('info');
+      expect(tradingWarning!.message).toContain('Trading Sunday');
+      expect(tradingWarning!.message).toContain('all shops open');
+    });
+
+    it('handles multi-day trip where trading Sunday falls on day 2', () => {
+      // 2026-01-24 is Saturday => day 2 = 2026-01-25 (trading Sunday)
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+        makeDaySegment({ dayNumber: 2, startKm: 80, endKm: 160 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('b1', 30, 'biedronka'),
+        makeSupplyPoint('b2', 120, 'biedronka'),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-01-24', // Saturday
+      });
+
+      const plan = generateResupplyPlan(
+        standardProfile,
+        days,
+        supplyPoints,
+        [],
+        config
+      );
+
+      // Day 2 is a trading Sunday — Biedronka at km 120 should be available
+      const day2Bied = plan.purchases.find(
+        (p) => p.dayNumber === 2 && p.stopType === 'biedronka'
+      );
+      expect(day2Bied).toBeDefined();
+
+      // Should have sunday_trading info for day 2, not sunday_closed
+      const tradingWarning = plan.warnings.find(
+        (w) => w.type === 'sunday_trading' && w.dayNumber === 2
+      );
+      expect(tradingWarning).toBeDefined();
+      expect(tradingWarning!.severity).toBe('info');
+    });
+  });
+
   // ─── 15% Extra Sunday Buffer ────────────────────────────────────────
 
   describe('15% extra food buffer on Sundays', () => {

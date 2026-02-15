@@ -30,6 +30,17 @@ export function getDistanceAlongRoute(
   return snapped.properties.location ?? 0; // km from start
 }
 
+export function getDistanceToRoute(
+  routeGeometry: GeoJSON.LineString,
+  lat: number,
+  lng: number
+): number {
+  const line = lineString(routeGeometry.coordinates);
+  const pt = point([lng, lat]);
+  const snapped = nearestPointOnLine(line, pt);
+  return snapped.properties.dist ?? Infinity; // km from route
+}
+
 export function getRouteBounds(routeGeometry: GeoJSON.LineString, paddingKm: number) {
   const line = lineString(routeGeometry.coordinates);
   const bounds = bbox(buffer(line, paddingKm, { units: 'kilometers' })!);

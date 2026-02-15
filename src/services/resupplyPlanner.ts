@@ -15,6 +15,7 @@ import type {
 import { FOOD_DB, calculateDailyCalories } from './diet';
 import { FOOD_TYPES } from './gapAnalysis';
 import { isOpenAt } from '../utils/openingHours';
+import { isTradingSunday } from '../data/sundayTrading';
 import {
   SUNDAY_FOOD_BUFFER,
   DANGER_GAP_LOOKAHEAD_KM,
@@ -134,6 +135,22 @@ function getDayOfWeek(tripStartDate: string | undefined, dayNumber: number): num
   return start.getDay(); // 0=Sunday
 }
 
+/**
+ * Compute the ISO date string (YYYY-MM-DD) for a given trip day number.
+ * Day 1 corresponds to the trip start date.
+ */
+function getTripDayDate(tripStartDate: string | undefined, dayNumber: number): string | null {
+  if (!tripStartDate) return null;
+  const d = new Date(tripStartDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + dayNumber - 1);
+  // Use local date parts (not toISOString which converts to UTC and can shift the day)
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // Polish Sunday trading ban: Biedronka (large retailer) always closed.
 // Generic 'shop' removed — small/owner-operated shops may be open on Sundays.
 // Żabka is a franchise (owner-operated) so it's open Sundays, typically reduced hours.
@@ -189,10 +206,12 @@ function rankStops(
   stops: SupplyPoint[],
   seg: DaySegment,
   config: ResupplyConfig,
-  dayOfWeek: number
+  dayOfWeek: number,
+  tripDate: string | null = null
 ): { stop: SupplyPoint; score: number; arrivalHour: number; isOpen: boolean | null }[] {
   const { strategy } = config;
   const isSunday = dayOfWeek === 0;
+  const isTradingDay = isSunday && tripDate !== null && isTradingSunday(tripDate);
 
   // Build store preference scores from strategy
   const storePref: Record<string, number> = {};
@@ -206,8 +225,8 @@ function rankStops(
     const arrivalHour = estimateArrivalHour(seg.startKm, stop.distanceFromStartKm, config.rideStartHour, config.avgSpeedKmh);
     const isOpen = stop.details?.is24h ? true : isOpenAt(stop.details?.openingHours, arrivalHour, dayOfWeek);
 
-    // On Sundays: skip Biedronka entirely (Polish Sunday trading ban for large retailers)
-    if (isSunday && !stop.details?.is24h && SUNDAY_CLOSED_TYPES.includes(stop.type)) {
+    // On non-trading Sundays: skip Biedronka entirely (Polish Sunday trading ban for large retailers)
+    if (isSunday && !isTradingDay && !stop.details?.is24h && SUNDAY_CLOSED_TYPES.includes(stop.type)) {
       continue;
     }
 
@@ -215,8 +234,8 @@ function rankStops(
 
     let score = storePref[stop.type] || 1;
 
-    // Sunday: boost 24h shops and Paczkomaty, slight penalty for reduced-hours Żabka
-    if (isSunday) {
+    // Sunday penalties only apply on non-trading Sundays
+    if (isSunday && !isTradingDay) {
       if (stop.details?.is24h || stop.type === 'paczkomat') {
         score += 8; // strong preference for 24h options on Sunday
       } else if (SUNDAY_REDUCED_HOURS_TYPES.includes(stop.type)) {
@@ -294,6 +313,8 @@ export function generateResupplyPlan(
     const segCals = calculateDailyCalories(profile, seg.distanceKm, seg.ascentM);
     const dayOfWeek = getDayOfWeek(config.tripStartDate, seg.dayNumber);
     const isSunday = dayOfWeek === 0;
+    const tripDate = getTripDayDate(config.tripStartDate, seg.dayNumber);
+    const isTradingDay = isSunday && tripDate !== null && isTradingSunday(tripDate);
 
     const segStops = supplyPoints
       .filter((sp) => FOOD_TYPES.includes(sp.type) && sp.distanceFromStartKm >= seg.startKm && sp.distanceFromStartKm <= seg.endKm)
@@ -310,8 +331,8 @@ export function generateResupplyPlan(
     const bufferCals = strategy.carryBufferDays * avgDailyCals;
     let targetCals = Math.max(0, segCals + bufferCals - carryCalories);
 
-    // On Sundays, add small buffer — Biedronka closed, some stores have reduced hours
-    if (isSunday) {
+    // On non-trading Sundays, add small buffer — Biedronka closed, some stores have reduced hours
+    if (isSunday && !isTradingDay) {
       targetCals += avgDailyCals * SUNDAY_FOOD_BUFFER;
     }
 
@@ -336,17 +357,27 @@ export function generateResupplyPlan(
       const dayName = new Date(config.tripStartDate ? config.tripStartDate + 'T00:00:00' : Date.now());
       dayName.setDate(dayName.getDate() + seg.dayNumber - 1);
       const dateStr = dayName.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-      warnings.push({
-        type: 'sunday_closed',
-        message: `Day ${seg.dayNumber} (${dateStr}): Sunday — Biedronka closed, Żabka has reduced hours. Consider stocking up Saturday.`,
-        dayNumber: seg.dayNumber,
-        distanceKm: seg.startKm,
-        severity: 'warning',
-      });
+      if (isTradingDay) {
+        warnings.push({
+          type: 'sunday_trading',
+          message: `Day ${seg.dayNumber} (${dateStr}): Trading Sunday — all shops open`,
+          dayNumber: seg.dayNumber,
+          distanceKm: seg.startKm,
+          severity: 'info',
+        });
+      } else {
+        warnings.push({
+          type: 'sunday_closed',
+          message: `Day ${seg.dayNumber} (${dateStr}): Sunday — Biedronka closed, Żabka has reduced hours. Consider stocking up Saturday.`,
+          dayNumber: seg.dayNumber,
+          distanceKm: seg.startKm,
+          severity: 'warning',
+        });
+      }
     }
 
-    // Rank available stops (Sunday-aware)
-    const ranked = rankStops(segStops, seg, config, dayOfWeek);
+    // Rank available stops (Sunday-aware, trading-Sunday-aware)
+    const ranked = rankStops(segStops, seg, config, dayOfWeek, tripDate);
 
     // Pick up to maxStopsPerDay
     const stopsToUse = ranked.slice(0, strategy.maxStopsPerDay);

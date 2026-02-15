@@ -4,6 +4,7 @@ import type { UnifiedShoppingPlan } from '../../types';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
 import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS } from '../../constants/supplyTypes';
+import { isTradingSunday } from '../../data/sundayTrading';
 
 /**
  * Format a decimal hour (e.g. 14.5) as "HH:MM" (e.g. "14:30").
@@ -26,8 +27,17 @@ function arrivalTimeClass(decimalHour: number): string {
   return 'timeline-arrival timeline-arrival-green';
 }
 
+function getTripDayDateStr(tripStartDate: string | undefined, dayNumber: number): string | null {
+  if (!tripStartDate) return null;
+  const d = new Date(tripStartDate + 'T00:00:00');
+  if (isNaN(d.getTime())) return null;
+  d.setDate(d.getDate() + dayNumber - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
   const routeWeather = useResupplyStore((s) => s.routeWeather);
+  const tripStartDate = useResupplyStore((s) => s.resupplyConfig.tripStartDate);
   const weatherWarnings = routeWeather ? getWeatherWarnings(routeWeather.days) : [];
 
   return (
@@ -35,11 +45,16 @@ export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: {
       {plan.dayBreakdown.map((day) => {
         const dayWeather = routeWeather?.days.find(d => d.dayNumber === day.dayNumber);
         const hasWeather = dayWeather && dayWeather.weatherCode !== -1;
+        const dayDateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
+        const isTradingDay = dayDateStr !== null && isTradingSunday(dayDateStr);
 
         return (
         <div key={day.dayNumber} className="timeline-day">
           <div className="timeline-day-header">
             <span className="timeline-day-num">Day {day.dayNumber}</span>
+            {isTradingDay && (
+              <span className="timeline-trading-badge">Trading Sunday</span>
+            )}
             {hasWeather && (
               <span className="timeline-weather" title={`${dayWeather.tempMin.toFixed(0)}–${dayWeather.tempMax.toFixed(0)}°C, ${dayWeather.precipitationSum.toFixed(0)}mm rain, wind ${dayWeather.windSpeedMax.toFixed(0)}km/h`}>
                 <span className="weather-emoji">{weatherEmoji(dayWeather.condition)}</span>

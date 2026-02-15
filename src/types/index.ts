@@ -207,7 +207,7 @@ export interface CarryWeightPoint {
 }
 
 export interface ResupplyWarning {
-  type: 'closed_store' | 'long_carry' | 'calorie_deficit' | 'heavy_load' | 'sunday_closed';
+  type: 'closed_store' | 'long_carry' | 'calorie_deficit' | 'heavy_load' | 'sunday_closed' | 'sunday_trading';
   message: string;
   dayNumber: number;
   distanceKm: number;
