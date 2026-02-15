@@ -43,9 +43,10 @@ export function useGapAnalysis(): void {
   }, [routeWeather, setWaterGaps]);
 
   // Water consumption plan generation
+  const daySegments = useRouteStore((s) => s.daySegments);
+  const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+
   useEffect(() => {
-    const daySegments = useRouteStore.getState().daySegments;
-    const supplyPoints = useSupplyStore.getState().supplyPoints;
     if (daySegments.length === 0) {
       setWaterPlan(null);
       return;
@@ -58,5 +59,5 @@ export function useGapAnalysis(): void {
       criticalPoints: plan.criticalPoints.length,
       recommendations: plan.recommendations.length,
     });
-  }, [routeWeather, waterCapacityL, setWaterPlan]);
+  }, [routeWeather, waterCapacityL, daySegments, supplyPoints, setWaterPlan]);
 }

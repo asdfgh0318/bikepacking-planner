@@ -3,6 +3,7 @@ import { useRouteStore } from '../store/routeStore';
 import { useResupplyStore } from '../store/resupplyStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { MapPin, Calendar, CheckCircle, ChevronRight, X } from 'lucide-react';
+import { RangeSlider } from './ui';
 
 const WIZARD_KEY = 'bikepacking-wizard-complete';
 
@@ -121,24 +122,17 @@ export function Wizard() {
             </div>
 
             <div className="wizard-field">
-              <label className="wizard-field-label">
-                Daily distance target
-              </label>
-              <div className="wizard-range-row">
-                <input
-                  type="range"
-                  className="range-input"
-                  min={40}
-                  max={150}
-                  value={localDailyKm}
-                  onChange={(e) => setLocalDailyKm(Number(e.target.value))}
-                />
-                <span className="wizard-range-value">{localDailyKm} km</span>
-              </div>
-              <div className="range-labels">
-                <span>40 km</span>
-                <span>150 km</span>
-              </div>
+              <RangeSlider
+                label="Daily distance target"
+                value={localDailyKm}
+                onChange={setLocalDailyKm}
+                min={40}
+                max={150}
+                step={5}
+                unit="km"
+                minLabel="40 km (relaxed)"
+                maxLabel="150 km (fast)"
+              />
             </div>
 
             <button className="btn btn-primary wizard-btn" onClick={handleStep1Next}>

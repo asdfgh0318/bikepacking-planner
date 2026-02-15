@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ShoppingCart, Zap, Cloud } from 'lucide-react';
+import { ShoppingCart, Zap, Cloud, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
@@ -66,7 +66,6 @@ export function ResupplyPanel() {
   const autoResult = strategyId === 'auto' && routeStats
     ? autoDetectStrategy(supplyPoints, routeStats.distanceKm)
     : null;
-  const resolvedStrategyId = autoResult ? autoResult.strategyId : strategyId;
   const resolvedStrategy = autoResult ? RESUPPLY_PRESETS[autoResult.strategyId] : strategy;
 
   if (daySegments.length === 0) {
@@ -228,7 +227,7 @@ export function ResupplyPanel() {
           onClick={() => setShowAdvanced((v) => !v)}
           type="button"
         >
-          <span>{showAdvanced ? '\u25BE' : '\u25B8'}</span>
+          {showAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           Advanced: Pre-Ship Packages
         </button>
 

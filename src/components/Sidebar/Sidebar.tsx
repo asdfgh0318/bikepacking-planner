@@ -71,7 +71,7 @@ export function Sidebar() {
             </button>
             <button className={`tab ${activeTab === 'weather' ? 'active' : ''}`} onClick={() => handleTabChange('weather')} role="tab" aria-selected={activeTab === 'weather'} aria-label="Weather forecast">
               <CloudSun size={16} />
-              Wx
+              Weather
             </button>
             <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleTabChange('settings')} role="tab" aria-selected={activeTab === 'settings'} aria-label="Settings and preferences">
               <Settings size={16} />

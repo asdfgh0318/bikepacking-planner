@@ -118,6 +118,18 @@ export function SettingsPanel() {
         <Toggle checked={showWeatherMarkers} onChange={setShowWeatherMarkers} label="Weather on Map" color="#60a5fa" />
       </div>
 
+      <div className="section-label">Setup</div>
+      <button
+        className="btn btn-sm"
+        style={{ marginBottom: 12 }}
+        onClick={() => {
+          localStorage.removeItem('bikepacking-wizard-complete');
+          window.location.reload();
+        }}
+      >
+        Restart Setup Wizard
+      </button>
+
       <div className="section-label">Debug Log <span className="debug-live-dot" /></div>
       <div className="debug-panel">
         <div className="debug-stats">

@@ -111,44 +111,44 @@ export function SupplyMarkers() {
           offset={18}
           className="custom-popup"
         >
-          <div style={{ fontFamily: '-apple-system, sans-serif', minWidth: 160 }}>
-            <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
+          <div className="popup-body">
+            <div className="popup-type">
               {SUPPLY_TYPE_LABELS[popupPoint.type] || popupPoint.type}
             </div>
-            <strong style={{ fontSize: 14 }}>{popupPoint.name}</strong>
+            <strong className="popup-name">{popupPoint.name}</strong>
             {popupPoint.details?.waterType && (
-              <div style={{ fontSize: 12, color: '#38bdf8', marginTop: 4 }}>
+              <div className="popup-detail popup-detail--water">
                 {popupPoint.details.waterType.replace('_', ' ')}
               </div>
             )}
             {popupPoint.details?.campsiteType && (
-              <div style={{ fontSize: 12, color: '#c084fc', marginTop: 4 }}>
+              <div className="popup-detail popup-detail--campsite">
                 {popupPoint.details.campsiteType.replace('_', ' ')}
                 {popupPoint.details.capacity && ` · ${popupPoint.details.capacity} spots`}
               </div>
             )}
             {popupPoint.details?.repairType && (
-              <div style={{ fontSize: 12, color: '#facc15', marginTop: 4 }}>
+              <div className="popup-detail popup-detail--repair">
                 {popupPoint.details.repairType === 'repair_station' ? 'Self-service station' : 'Bike shop'}
                 {popupPoint.details.phone && ` · ${popupPoint.details.phone}`}
               </div>
             )}
             {popupPoint.details?.address && (
-              <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+              <div className="popup-detail popup-detail--address">
                 {popupPoint.details.address}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              <span style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+            <div className="popup-tags">
+              <span className="popup-tag popup-tag--km">
                 {popupPoint.distanceFromStartKm.toFixed(1)} km
               </span>
               {popupPoint.details?.is24h && (
-                <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                <span className="popup-tag popup-tag--24h">
                   24/7
                 </span>
               )}
               {popupPoint.details?.fee === false && (
-                <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+                <span className="popup-tag popup-tag--free">
                   Free
                 </span>
               )}
