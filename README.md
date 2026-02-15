@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="banner.svg" alt="bikepacking-planner banner" width="100%">
+</p>
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
