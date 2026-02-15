@@ -1,4 +1,5 @@
 import { useRouteStore } from '../store/routeStore';
+import { distanceKm } from '../utils/distance';
 import { useMemo } from 'react';
 
 export function ElevationProfile() {
@@ -17,11 +18,9 @@ export function ElevationProfile() {
 
     for (let i = 0; i < coords.length; i++) {
       if (i > 0) {
-        const [x1, y1] = coords[i - 1];
-        const [x2, y2] = coords[i];
-        const dx = (x2 - x1) * 111.32 * Math.cos(((y1 + y2) / 2) * (Math.PI / 180));
-        const dy = (y2 - y1) * 110.574;
-        cumDist += Math.sqrt(dx * dx + dy * dy);
+        const [lng1, lat1] = coords[i - 1];
+        const [lng2, lat2] = coords[i];
+        cumDist += distanceKm(lat1, lng1, lat2, lng2);
       }
       points.push({ distKm: cumDist, eleM: coords[i][2] ?? 0 });
     }

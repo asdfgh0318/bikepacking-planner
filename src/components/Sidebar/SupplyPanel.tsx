@@ -1,17 +1,8 @@
 import { Grid3X3, AlertTriangle, Droplets } from 'lucide-react';
 import { useSupplyStore } from '../../store/supplyStore';
 import { EmptyState } from '../ui';
+import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
 import type { GapSeverity } from '../../types';
-
-const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string }> = {
-  paczkomat: { icon: 'P', color: '#fbbf24', label: 'Paczkomat' },
-  zabka: { icon: 'Ż', color: '#4ade80', label: 'Żabka' },
-  biedronka: { icon: 'B', color: '#f87171', label: 'Biedronka' },
-  shop: { icon: 'S', color: '#60a5fa', label: 'Shop' },
-  water: { icon: 'W', color: '#38bdf8', label: 'Water' },
-  campsite: { icon: 'C', color: '#c084fc', label: 'Campsite' },
-  repair: { icon: 'R', color: '#facc15', label: 'Repair' },
-};
 
 const GAP_COLORS: Record<GapSeverity, { bg: string; text: string; label: string }> = {
   safe: { bg: 'rgba(74, 222, 128, 0.1)', text: '#4ade80', label: 'Safe' },
@@ -67,13 +58,15 @@ export function SupplyPanel() {
       {/* Summary */}
       <div className="supply-summary">
         {Object.entries(counts).map(([type, count]) => {
-          const cfg = TYPE_CONFIG[type] || TYPE_CONFIG.shop;
+          const color = (SUPPLY_COLORS[type] || SUPPLY_COLORS.shop).bg;
+          const icon = SUPPLY_BADGE_LETTERS[type] || SUPPLY_BADGE_LETTERS.shop;
+          const label = SUPPLY_TYPE_LABELS[type] || type;
           return (
             <div key={type} className="supply-count">
-              <span className="supply-count-badge" style={{ background: cfg.color }}>
-                {cfg.icon}
+              <span className="supply-count-badge" style={{ background: color }}>
+                {icon}
               </span>
-              <span>{count} {cfg.label}</span>
+              <span>{count} {label}</span>
             </div>
           );
         })}
@@ -148,12 +141,13 @@ export function SupplyPanel() {
       {/* List */}
       <ul className="supply-list">
         {withGaps.map((pt) => {
-          const cfg = TYPE_CONFIG[pt.type] || TYPE_CONFIG.shop;
+          const color = (SUPPLY_COLORS[pt.type] || SUPPLY_COLORS.shop).bg;
+          const icon = SUPPLY_BADGE_LETTERS[pt.type] || SUPPLY_BADGE_LETTERS.shop;
           return (
             <li key={pt.id} className="supply-item">
               <div className="supply-item-left">
-                <span className="supply-badge" style={{ background: cfg.color }}>
-                  {cfg.icon}
+                <span className="supply-badge" style={{ background: color }}>
+                  {icon}
                 </span>
                 <div className="supply-connector" />
               </div>

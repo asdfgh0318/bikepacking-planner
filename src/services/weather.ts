@@ -1,11 +1,21 @@
-import * as turf from '@turf/turf';
+import { lineString, length, along } from '@turf/turf';
 import type { DayWeather, RouteWeather, WeatherCondition, DaySegment } from '../types';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import {
+  WEATHER_CACHE_TTL_MS,
+  WEATHER_TIMEZONE,
+  WEATHER_MAX_FORECAST_DAYS,
+  WEATHER_RAIN_WARNING_MM,
+  WEATHER_RAIN_DANGER_MM,
+  WEATHER_WIND_WARNING_KMH,
+  WEATHER_WIND_DANGER_KMH,
+  WEATHER_HEAT_WARNING_C,
+  WEATHER_HEAT_DANGER_C,
+  WEATHER_FREEZE_WARNING_C,
+  WEATHER_FREEZE_DANGER_C,
+} from '../config';
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
-
-// Cache weather for 1 hour, keyed by (rounded coordinate, tripStartDate)
-const CACHE_TTL_MS = 60 * 60 * 1000;
 const weatherCache = new Map<string, RouteWeather>();
 
 function buildCacheKey(coord: [number, number], tripStartDate: string): string {
@@ -18,7 +28,7 @@ function getCachedWeather(coord: [number, number], tripStartDate: string): Route
   const key = buildCacheKey(coord, tripStartDate);
   const entry = weatherCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.fetchedAt >= CACHE_TTL_MS) {
+  if (Date.now() - entry.fetchedAt >= WEATHER_CACHE_TTL_MS) {
     weatherCache.delete(key);
     return null;
   }
@@ -71,9 +81,9 @@ export function weatherEmoji(condition: WeatherCondition): string {
  * doesn't vary much over that distance.
  */
 function getRouteMidpoint(routeGeometry: GeoJSON.LineString): [number, number] {
-  const line = turf.lineString(routeGeometry.coordinates);
-  const totalKm = turf.length(line, { units: 'kilometers' });
-  const mid = turf.along(line, totalKm / 2, { units: 'kilometers' });
+  const line = lineString(routeGeometry.coordinates);
+  const totalKm = length(line, { units: 'kilometers' });
+  const mid = along(line, totalKm / 2, { units: 'kilometers' });
   return mid.geometry.coordinates as [number, number];
 }
 
@@ -110,8 +120,8 @@ async function fetchOpenMeteo(
       'wind_direction_10m_dominant',
       'weather_code',
     ].join(','),
-    timezone: 'Europe/Warsaw',
-    forecast_days: String(Math.min(forecastDays, 16)), // Open-Meteo max 16 days
+    timezone: WEATHER_TIMEZONE,
+    forecast_days: String(Math.min(forecastDays, WEATHER_MAX_FORECAST_DAYS)),
   });
 
   const res = await fetchWithRetry(`${OPEN_METEO_URL}?${params}`, { signal });
@@ -145,8 +155,8 @@ export async function fetchRouteWeather(
   const now = new Date();
   const daysUntilStart = Math.round((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Open-Meteo only forecasts up to 16 days ahead
-  if (daysUntilStart > 16) {
+  // Open-Meteo only forecasts up to WEATHER_MAX_FORECAST_DAYS days ahead
+  if (daysUntilStart > WEATHER_MAX_FORECAST_DAYS) {
     return {
       days: daySegments.map((seg) => ({
         dayNumber: seg.dayNumber,
@@ -162,10 +172,11 @@ export async function fetchRouteWeather(
       })),
       fetchedAt: Date.now(),
       sampleCoord: [lng, lat],
+      forecastAvailable: false,
     };
   }
 
-  const forecastDays = Math.min(Math.max(daysUntilStart + numDays, 1), 16);
+  const forecastDays = Math.min(Math.max(daysUntilStart + numDays, 1), WEATHER_MAX_FORECAST_DAYS);
   const data = await fetchOpenMeteo(lat, lng, forecastDays, signal);
 
   // Map API dates to trip days
@@ -209,6 +220,7 @@ export async function fetchRouteWeather(
     days,
     fetchedAt: Date.now(),
     sampleCoord: [lng, lat],
+    forecastAvailable: true,
   };
 
   setCachedWeather([lng, lat], tripStartDate, result);
@@ -234,38 +246,38 @@ export function getWeatherWarnings(days: DayWeather[]): { dayNumber: number; mes
     if (day.weatherCode === -1) continue; // no data
 
     // Heavy rain
-    if (day.precipitationSum > 10) {
+    if (day.precipitationSum > WEATHER_RAIN_WARNING_MM) {
       warnings.push({
         dayNumber: day.dayNumber,
         message: `Day ${day.dayNumber}: Heavy rain expected (${day.precipitationSum.toFixed(0)}mm). Pack rain gear, expect slower progress.`,
-        severity: day.precipitationSum > 20 ? 'danger' : 'warning',
+        severity: day.precipitationSum > WEATHER_RAIN_DANGER_MM ? 'danger' : 'warning',
       });
     }
 
     // Strong wind
-    if (day.windSpeedMax > 40) {
+    if (day.windSpeedMax > WEATHER_WIND_WARNING_KMH) {
       warnings.push({
         dayNumber: day.dayNumber,
         message: `Day ${day.dayNumber}: Strong wind ${day.windSpeedMax.toFixed(0)} km/h. Reduce daily target.`,
-        severity: day.windSpeedMax > 60 ? 'danger' : 'warning',
+        severity: day.windSpeedMax > WEATHER_WIND_DANGER_KMH ? 'danger' : 'warning',
       });
     }
 
     // Extreme heat
-    if (day.tempMax > 33) {
+    if (day.tempMax > WEATHER_HEAT_WARNING_C) {
       warnings.push({
         dayNumber: day.dayNumber,
         message: `Day ${day.dayNumber}: Heat warning ${day.tempMax.toFixed(0)}°C. Carry extra water, start early.`,
-        severity: day.tempMax > 38 ? 'danger' : 'warning',
+        severity: day.tempMax > WEATHER_HEAT_DANGER_C ? 'danger' : 'warning',
       });
     }
 
     // Freezing
-    if (day.tempMin < 0) {
+    if (day.tempMin < WEATHER_FREEZE_WARNING_C) {
       warnings.push({
         dayNumber: day.dayNumber,
         message: `Day ${day.dayNumber}: Freezing temperatures (${day.tempMin.toFixed(0)}°C). Risk of ice on roads.`,
-        severity: day.tempMin < -5 ? 'danger' : 'warning',
+        severity: day.tempMin < WEATHER_FREEZE_DANGER_C ? 'danger' : 'warning',
       });
     }
 

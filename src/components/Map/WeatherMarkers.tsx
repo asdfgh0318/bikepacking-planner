@@ -1,5 +1,5 @@
 import { Marker } from 'react-map-gl/maplibre';
-import * as turf from '@turf/turf';
+import { lineString, along } from '@turf/turf';
 import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { weatherEmoji } from '../../services/weather';
@@ -14,7 +14,7 @@ export function WeatherMarkers() {
     return null;
   }
 
-  const line = turf.lineString(routeGeometry.coordinates);
+  const line = lineString(routeGeometry.coordinates);
 
   return (
     <>
@@ -23,7 +23,7 @@ export function WeatherMarkers() {
         if (!dayWeather || dayWeather.weatherCode === -1) return null;
 
         const midKm = (seg.startKm + seg.endKm) / 2;
-        const midPoint = turf.along(line, midKm, { units: 'kilometers' });
+        const midPoint = along(line, midKm, { units: 'kilometers' });
         const [lng, lat] = midPoint.geometry.coordinates;
 
         return (

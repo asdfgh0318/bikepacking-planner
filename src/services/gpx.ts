@@ -5,7 +5,7 @@
  * exportRouteToGpx     -- generates a GPX XML string from waypoints / route geometry.
  */
 
-const MAX_WAYPOINTS = 50;
+import { MAX_GPX_WAYPOINTS } from '../config';
 
 /* ------------------------------------------------------------------ */
 /*  Import                                                            */
@@ -38,15 +38,15 @@ export function parseGpxToWaypoints(
     }
   }
 
-  // Simplify to at most MAX_WAYPOINTS by taking every Nth point, always
+  // Simplify to at most MAX_GPX_WAYPOINTS by taking every Nth point, always
   // keeping the first and last.
-  if (all.length <= MAX_WAYPOINTS) {
+  if (all.length <= MAX_GPX_WAYPOINTS) {
     return all;
   }
 
-  const step = (all.length - 1) / (MAX_WAYPOINTS - 1);
+  const step = (all.length - 1) / (MAX_GPX_WAYPOINTS - 1);
   const sampled: Array<{ lat: number; lng: number }> = [];
-  for (let i = 0; i < MAX_WAYPOINTS; i++) {
+  for (let i = 0; i < MAX_GPX_WAYPOINTS; i++) {
     const idx = Math.min(Math.round(i * step), all.length - 1);
     sampled.push(all[idx]);
   }

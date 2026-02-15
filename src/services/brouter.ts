@@ -1,5 +1,6 @@
 import type { RouteStats, RoutingProfile } from '../types';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { BROUTER_TIMEOUT_MS } from '../config';
 
 const BROUTER_API = 'https://brouter.de/brouter';
 
@@ -34,7 +35,7 @@ export async function calculateRoute(
     format: 'geojson',
   });
 
-  const res = await fetchWithRetry(`${BROUTER_API}?${params}`, { signal });
+  const res = await fetchWithRetry(`${BROUTER_API}?${params}`, { signal, timeout: BROUTER_TIMEOUT_MS });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     if (body.includes('not mapped')) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Check, X } from 'lucide-react';
 import { useGearStore } from '../../store/gearStore';
 import { useDietStore } from '../../store/dietStore';
@@ -38,12 +38,15 @@ export function GearPanel() {
   const totalWeightKg = bikeWeightKg + gearWeightKg + foodWeightKg;
 
   // Group by category
-  const grouped = packedItems.reduce<Record<string, { items: typeof packedItems; totalG: number }>>((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = { items: [], totalG: 0 };
-    acc[item.category].items.push(item);
-    acc[item.category].totalG += item.weightG;
-    return acc;
-  }, {});
+  const grouped = useMemo(() =>
+    packedItems.reduce<Record<string, { items: typeof packedItems; totalG: number }>>((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = { items: [], totalG: 0 };
+      acc[item.category].items.push(item);
+      acc[item.category].totalG += item.weightG;
+      return acc;
+    }, {}),
+    [packedItems]
+  );
 
   const handleAddItem = () => {
     const name = newName.trim();

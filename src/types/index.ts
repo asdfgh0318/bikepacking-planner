@@ -141,6 +141,7 @@ export interface RouteWeather {
   days: DayWeather[];
   fetchedAt: number;              // timestamp for cache
   sampleCoord: [number, number];  // representative coordinate used
+  forecastAvailable: boolean;     // false when trip is >16 days out (Open-Meteo limit)
 }
 
 // Resupply Strategy

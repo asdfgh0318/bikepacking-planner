@@ -260,7 +260,7 @@ export function ResupplyPanel() {
           <span>Loading weather forecast...</span>
         </div>
       )}
-      {routeWeather && routeWeather.days.some(d => d.weatherCode !== -1) && (
+      {routeWeather && routeWeather.forecastAvailable && routeWeather.days.some(d => d.weatherCode !== -1) && (
         <div className="weather-bar">
           <div className="weather-bar-header">
             <Cloud size={12} />
@@ -277,10 +277,10 @@ export function ResupplyPanel() {
           </div>
         </div>
       )}
-      {routeWeather && routeWeather.days.every(d => d.weatherCode === -1) && (
+      {routeWeather && (routeWeather.forecastAvailable === false || routeWeather.days.every(d => d.weatherCode === -1)) && (
         <div className="weather-bar no-data">
           <Cloud size={12} />
-          <span>Trip too far ahead for forecast (max 16 days)</span>
+          <span>Weather forecasts are available for trips starting within 16 days</span>
         </div>
       )}
 

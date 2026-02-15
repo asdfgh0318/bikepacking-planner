@@ -1,56 +1,27 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Marker, Popup } from 'react-map-gl/maplibre';
 import { useSupplyStore } from '../../store/supplyStore';
 import { useRouteStore } from '../../store/routeStore';
+import { SUPPLY_COLORS, SUPPLY_ICONS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
+import { distanceKm } from '../../utils/distance';
 import type { SupplyPoint } from '../../types';
 
-const COLORS: Record<string, { bg: string; border: string }> = {
-  paczkomat: { bg: '#fbbf24', border: '#92400e' },
-  zabka: { bg: '#4ade80', border: '#166534' },
-  biedronka: { bg: '#f87171', border: '#991b1b' },
-  shop: { bg: '#60a5fa', border: '#1e40af' },
-  water: { bg: '#38bdf8', border: '#0c4a6e' },
-  campsite: { bg: '#c084fc', border: '#5b21b6' },
-  repair: { bg: '#facc15', border: '#854d0e' },
-  train_station: { bg: '#fca5a5', border: '#dc2626' },
-  bus_stop: { bg: '#fed7aa', border: '#ea580c' },
-  hospital: { bg: '#fecaca', border: '#dc2626' },
-};
-
-const ICONS: Record<string, string> = {
-  paczkomat: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#92400e" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
-  zabka: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#166534" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
-  biedronka: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#991b1b" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
-  shop: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1e40af" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/></svg>`,
-  water: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#0c4a6e" stroke-width="2.5"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
-  campsite: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#5b21b6" stroke-width="2.5"><path d="M12 2L2 22h20L12 2z"/><path d="M12 14v4"/></svg>`,
-  repair: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#854d0e" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>`,
-  train_station: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#dc2626" stroke-width="2.5"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><circle cx="8" cy="20" r="1"/><circle cx="16" cy="20" r="1"/></svg>`,
-  bus_stop: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ea580c" stroke-width="2.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>`,
-  hospital: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#dc2626" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>`,
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  paczkomat: 'InPost Paczkomat',
-  zabka: 'Żabka',
-  biedronka: 'Biedronka',
-  shop: 'Shop',
-  water: 'Water Source',
-  campsite: 'Campsite',
-  repair: 'Bike Repair',
-  train_station: 'Train Station',
-  bus_stop: 'Bus Stop',
-  hospital: 'Hospital',
-};
-
-// Distance in km between two points (haversine approximation)
-function distKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const dx = (lng2 - lng1) * 111.32 * Math.cos(((lat1 + lat2) / 2) * (Math.PI / 180));
-  const dy = (lat2 - lat1) * 110.574;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
 const SHELTER_RADIUS_KM = 10; // show shelters within 10km of predicted night stops
+
+/**
+ * Small helper to inject a static SVG string into a DOM node via ref callback,
+ * avoiding dangerouslySetInnerHTML while still using pre-built SVG markup from
+ * the ICONS lookup table (which contains only hardcoded constants).
+ */
+function SvgIcon({ svgString }: { svgString: string }) {
+  const ref = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node) node.innerHTML = svgString;
+    },
+    [svgString],
+  );
+  return <div ref={ref} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />;
+}
 
 export function SupplyMarkers() {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
@@ -72,32 +43,34 @@ export function SupplyMarkers() {
     [daySegments]
   );
 
-  const allPoints = [...supplyPoints, ...(showBailOut ? bailOutPoints : [])];
+  const visible = useMemo(() => {
+    const allPoints = [...supplyPoints, ...(showBailOut ? bailOutPoints : [])];
 
-  const visible = allPoints.filter((p) => {
-    if (p.type === 'paczkomat' && !showPaczkomaty) return false;
-    if (p.type === 'water' && !showWater) return false;
-    if (p.type === 'campsite' && !showCampsites) return false;
-    if (p.type === 'repair' && !showRepair) return false;
-    if (['train_station', 'hospital'].includes(p.type) && !showBailOut) return false;
-    if (!['paczkomat', 'water', 'campsite', 'repair', 'train_station', 'hospital'].includes(p.type) && !showShops) return false;
+    return allPoints.filter((p) => {
+      if (p.type === 'paczkomat' && !showPaczkomaty) return false;
+      if (p.type === 'water' && !showWater) return false;
+      if (p.type === 'campsite' && !showCampsites) return false;
+      if (p.type === 'repair' && !showRepair) return false;
+      if (['train_station', 'hospital'].includes(p.type) && !showBailOut) return false;
+      if (!['paczkomat', 'water', 'campsite', 'repair', 'train_station', 'hospital'].includes(p.type) && !showShops) return false;
 
-    // Filter campsites/shelters to only show near predicted night stops
-    if (p.type === 'campsite' && nightStopCoords.length > 0) {
-      const nearNightStop = nightStopCoords.some(
-        (ns) => distKm(p.lat, p.lng, ns.lat, ns.lng) <= SHELTER_RADIUS_KM
-      );
-      if (!nearNightStop) return false;
-    }
+      // Filter campsites/shelters to only show near predicted night stops
+      if (p.type === 'campsite' && nightStopCoords.length > 0) {
+        const nearNightStop = nightStopCoords.some(
+          (ns) => distanceKm(p.lat, p.lng, ns.lat, ns.lng) <= SHELTER_RADIUS_KM
+        );
+        if (!nearNightStop) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [supplyPoints, bailOutPoints, showPaczkomaty, showShops, showWater, showCampsites, showRepair, showBailOut, nightStopCoords]);
 
   return (
     <>
       {visible.map((pt) => {
-        const c = COLORS[pt.type] || COLORS.shop;
-        const svg = ICONS[pt.type] || ICONS.shop;
+        const c = SUPPLY_COLORS[pt.type] || SUPPLY_COLORS.shop;
+        const svg = SUPPLY_ICONS[pt.type] || SUPPLY_ICONS.shop;
         return (
           <Marker
             key={pt.id}
@@ -123,8 +96,9 @@ export function SupplyMarkers() {
                 boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
                 cursor: 'pointer',
               }}
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
+            >
+              <SvgIcon svgString={svg} />
+            </div>
           </Marker>
         );
       })}
@@ -139,7 +113,7 @@ export function SupplyMarkers() {
         >
           <div style={{ fontFamily: '-apple-system, sans-serif', minWidth: 160 }}>
             <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>
-              {TYPE_LABELS[popupPoint.type] || popupPoint.type}
+              {SUPPLY_TYPE_LABELS[popupPoint.type] || popupPoint.type}
             </div>
             <strong style={{ fontSize: 14 }}>{popupPoint.name}</strong>
             {popupPoint.details?.waterType && (

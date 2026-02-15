@@ -8,6 +8,15 @@ import type {
   ShippingPlan,
 } from '../types';
 import { FOOD_DB } from './diet';
+import {
+  PACZKOMAT_MIN_USEFUL_KM,
+  PACZKOMAT_EARLY_PENALTY,
+  PACZKOMAT_NIGHT_STOP_CLOSE_BONUS,
+  PACZKOMAT_NIGHT_STOP_NEAR_BONUS,
+  PACZKOMAT_24H_BONUS,
+  PACZKOMAT_LARGE_LOCKER_BONUS,
+  PACZKOMAT_PARCEL_TARGET_CALS,
+} from '../config';
 
 function getShelfStableItems(foods: FoodItem[]): FoodItem[] {
   return foods.filter((f) => f.availableAt.includes('paczkomat'));
@@ -42,10 +51,10 @@ function scorePaczkomat(
 ): number {
   let score = 0;
 
-  // Penalty: Paczkomaty within first 30 km of the route are useless —
+  // Penalty: Paczkomaty within first N km of the route are useless —
   // you start fully stocked and don't need a resupply on day 1.
-  if (paczkomat.distanceFromStartKm < 30) {
-    score -= 10;
+  if (paczkomat.distanceFromStartKm < PACZKOMAT_MIN_USEFUL_KM) {
+    score += PACZKOMAT_EARLY_PENALTY;
   }
 
   // Prefer near night stop (end of day) — within 10 km of segment end.
@@ -53,18 +62,18 @@ function scorePaczkomat(
   // set up camp, not while riding.
   if (config.preferNearNightStop) {
     const distFromEnd = Math.abs(paczkomat.distanceFromStartKm - daySegment.endKm);
-    if (distFromEnd < 5) score += 14;
-    else if (distFromEnd < 10) score += 9;
+    if (distFromEnd < 5) score += PACZKOMAT_NIGHT_STOP_CLOSE_BONUS;
+    else if (distFromEnd < 10) score += PACZKOMAT_NIGHT_STOP_NEAR_BONUS;
   }
 
   // Prefer 24/7 access — helpful but secondary to night-stop proximity
   if (config.prefer24h && paczkomat.details?.is24h) {
-    score += 7;
+    score += PACZKOMAT_24H_BONUS;
   }
 
   // Minor preference for Paczkomaty with larger lockers
   if (paczkomat.details?.lockerSize?.some((s) => s === 'C' || s === 'L')) {
-    score += 2;
+    score += PACZKOMAT_LARGE_LOCKER_BONUS;
   }
 
   return score;
@@ -124,7 +133,7 @@ export function generateShippingPlan(
       const best = candidates[0].point;
 
       // Build packing list — enough shelf-stable food to supplement 1-2 days
-      const targetCals = 800; // Supplemental calories per parcel (not full meals)
+      const targetCals = PACZKOMAT_PARCEL_TARGET_CALS;
       const items: FoodItem[] = [];
       let totalCals = 0;
 

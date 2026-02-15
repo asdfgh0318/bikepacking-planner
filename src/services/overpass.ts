@@ -1,4 +1,5 @@
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { OVERPASS_TIMEOUT_MS, OVERPASS_QUERY_TIMEOUT_S } from '../config';
 
 const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
 
@@ -29,7 +30,7 @@ export async function fetchShopsNearBbox(bounds: {
 
   // Query Żabka and Biedronka using brand:wikidata for reliability
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
     (
       node["brand:wikidata"="Q2874810"](${bbox});
       node["brand:wikidata"="Q857855"](${bbox});
@@ -42,6 +43,7 @@ export async function fetchShopsNearBbox(bounds: {
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal,
+    timeout: OVERPASS_TIMEOUT_MS,
   });
 
   if (!res.ok) {
@@ -87,7 +89,7 @@ export async function fetchWaterSourcesNearBbox(bounds: {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
     (
       node["natural"="spring"](${bbox});
       node["amenity"="drinking_water"](${bbox});
@@ -102,6 +104,7 @@ export async function fetchWaterSourcesNearBbox(bounds: {
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal,
+    timeout: OVERPASS_TIMEOUT_MS,
   });
 
   if (!res.ok) {
@@ -155,7 +158,7 @@ export async function fetchCampsitesNearBbox(bounds: {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
     (
       node["tourism"="camp_site"](${bbox});
       way["tourism"="camp_site"](${bbox});
@@ -173,6 +176,7 @@ export async function fetchCampsitesNearBbox(bounds: {
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal,
+    timeout: OVERPASS_TIMEOUT_MS,
   });
 
   if (!res.ok) {
@@ -236,7 +240,7 @@ export async function fetchRepairShopsNearBbox(bounds: {
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
 
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
     (
       node["shop"="bicycle"](${bbox});
       way["shop"="bicycle"](${bbox});
@@ -250,6 +254,7 @@ export async function fetchRepairShopsNearBbox(bounds: {
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal,
+    timeout: OVERPASS_TIMEOUT_MS,
   });
 
   if (!res.ok) {
@@ -306,7 +311,7 @@ export async function fetchBailOutPointsNearBbox(bounds: {
 
   // Only major rail stations (with names) and hospitals — skip halts & bus stops to reduce clutter
   const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
     (
       node["railway"="station"]["name"](${bbox});
       node["amenity"="hospital"]["name"](${bbox});
@@ -320,6 +325,7 @@ export async function fetchBailOutPointsNearBbox(bounds: {
     body: `data=${encodeURIComponent(query)}`,
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal,
+    timeout: OVERPASS_TIMEOUT_MS,
   });
 
   if (!res.ok) {

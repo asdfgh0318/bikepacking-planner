@@ -15,6 +15,12 @@ import type {
 import { FOOD_DB, calculateDailyCalories } from './diet';
 import { FOOD_TYPES } from './gapAnalysis';
 import { isOpenAt } from '../utils/openingHours';
+import {
+  SUNDAY_FOOD_BUFFER,
+  DANGER_GAP_LOOKAHEAD_KM,
+  DANGER_GAP_EXTRA_CALORIE_FACTOR,
+  HEAVY_LOAD_WARNING_G,
+} from '../config';
 
 export const RESUPPLY_PRESETS: Record<ResupplyStrategyId, ResupplyStrategy> = {
   'daily-ration': {
@@ -277,15 +283,15 @@ export function generateResupplyPlan(
 
     // On Sundays, add small buffer — Biedronka closed, some stores have reduced hours
     if (isSunday) {
-      targetCals += avgDailyCals * 0.15; // 15% extra to compensate for fewer options
+      targetCals += avgDailyCals * SUNDAY_FOOD_BUFFER;
     }
 
     // Extra for danger gaps
     const nextGap = dangerGaps.find(
-      (g) => g.startKm >= seg.startKm && g.startKm <= seg.endKm + 20
+      (g) => g.startKm >= seg.startKm && g.startKm <= seg.endKm + DANGER_GAP_LOOKAHEAD_KM
     );
     if (nextGap) {
-      const extraCals = nextGap.distanceKm * calsPerKm * 0.4;
+      const extraCals = nextGap.distanceKm * calsPerKm * DANGER_GAP_EXTRA_CALORIE_FACTOR;
       targetCals += extraCals;
       warnings.push({
         type: 'long_carry',
@@ -417,7 +423,7 @@ export function generateResupplyPlan(
 
     // Heavy load warning
     const peakWeight = Math.max(...carryWeightCurve.filter((p) => p.dayNumber === seg.dayNumber).map((p) => p.foodWeightG));
-    if (peakWeight > 2500) {
+    if (peakWeight > HEAVY_LOAD_WARNING_G) {
       warnings.push({
         type: 'heavy_load',
         message: `Day ${seg.dayNumber}: Food weight peaks at ${(peakWeight / 1000).toFixed(1)} kg`,

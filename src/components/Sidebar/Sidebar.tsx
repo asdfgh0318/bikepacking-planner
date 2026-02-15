@@ -13,8 +13,21 @@ import { SavedRoutes } from './SavedRoutes';
 
 type Tab = 'route' | 'supply' | 'diet' | 'gear' | 'shopping' | 'weather' | 'settings';
 
+const VALID_TABS: ReadonlySet<string> = new Set<Tab>(['route', 'supply', 'diet', 'gear', 'shopping', 'weather', 'settings']);
+const STORAGE_KEY = 'bikepacking-sidebar-tab';
+
+function readStoredTab(): Tab {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored && VALID_TABS.has(stored) ? (stored as Tab) : 'route';
+}
+
 export function Sidebar() {
-  const [activeTab, setActiveTab] = useState<Tab>('route');
+  const [activeTab, setActiveTab] = useState<Tab>(readStoredTab);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    localStorage.setItem(STORAGE_KEY, tab);
+  };
   const [collapsed, setCollapsed] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState(true);
 
@@ -36,31 +49,31 @@ export function Sidebar() {
       {!collapsed && (
         <>
           <nav className="tab-nav" role="tablist" aria-label="Sidebar navigation">
-            <button className={`tab ${activeTab === 'route' ? 'active' : ''}`} onClick={() => setActiveTab('route')} role="tab" aria-selected={activeTab === 'route'} aria-label="Route planning and stats">
+            <button className={`tab ${activeTab === 'route' ? 'active' : ''}`} onClick={() => handleTabChange('route')} role="tab" aria-selected={activeTab === 'route'} aria-label="Route planning and stats">
               <TrendingUp size={16} />
               Route
             </button>
-            <button className={`tab ${activeTab === 'supply' ? 'active' : ''}`} onClick={() => setActiveTab('supply')} role="tab" aria-selected={activeTab === 'supply'} aria-label="Supply points and gaps">
+            <button className={`tab ${activeTab === 'supply' ? 'active' : ''}`} onClick={() => handleTabChange('supply')} role="tab" aria-selected={activeTab === 'supply'} aria-label="Supply points and gaps">
               <Package size={16} />
               Supply
             </button>
-            <button className={`tab ${activeTab === 'diet' ? 'active' : ''}`} onClick={() => setActiveTab('diet')} role="tab" aria-selected={activeTab === 'diet'} aria-label="Diet and nutrition planning">
+            <button className={`tab ${activeTab === 'diet' ? 'active' : ''}`} onClick={() => handleTabChange('diet')} role="tab" aria-selected={activeTab === 'diet'} aria-label="Diet and nutrition planning">
               <Coffee size={16} />
               Diet
             </button>
-            <button className={`tab ${activeTab === 'gear' ? 'active' : ''}`} onClick={() => setActiveTab('gear')} role="tab" aria-selected={activeTab === 'gear'} aria-label="Gear checklist and weight">
+            <button className={`tab ${activeTab === 'gear' ? 'active' : ''}`} onClick={() => handleTabChange('gear')} role="tab" aria-selected={activeTab === 'gear'} aria-label="Gear checklist and weight">
               <Backpack size={16} />
               Gear
             </button>
-            <button className={`tab ${activeTab === 'shopping' ? 'active' : ''}`} onClick={() => setActiveTab('shopping')} role="tab" aria-selected={activeTab === 'shopping'} aria-label="Shopping and resupply plan">
+            <button className={`tab ${activeTab === 'shopping' ? 'active' : ''}`} onClick={() => handleTabChange('shopping')} role="tab" aria-selected={activeTab === 'shopping'} aria-label="Shopping and resupply plan">
               <ShoppingCart size={16} />
               Shop
             </button>
-            <button className={`tab ${activeTab === 'weather' ? 'active' : ''}`} onClick={() => setActiveTab('weather')} role="tab" aria-selected={activeTab === 'weather'} aria-label="Weather forecast">
+            <button className={`tab ${activeTab === 'weather' ? 'active' : ''}`} onClick={() => handleTabChange('weather')} role="tab" aria-selected={activeTab === 'weather'} aria-label="Weather forecast">
               <CloudSun size={16} />
               Wx
             </button>
-            <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')} role="tab" aria-selected={activeTab === 'settings'} aria-label="Settings and preferences">
+            <button className={`tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => handleTabChange('settings')} role="tab" aria-selected={activeTab === 'settings'} aria-label="Settings and preferences">
               <Settings size={16} />
               Settings
             </button>

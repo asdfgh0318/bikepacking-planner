@@ -1,4 +1,14 @@
 import type { SupplyPoint, SupplyGap, GapSeverity } from '../types';
+import {
+  FOOD_GAP_SAFE_KM,
+  FOOD_GAP_CAUTION_KM,
+  FOOD_GAP_MIN_EDGE_KM,
+  FOOD_GAP_MIN_BETWEEN_KM,
+  WATER_GAP_SAFE_KM,
+  WATER_GAP_CAUTION_KM,
+  WATER_GAP_MIN_EDGE_KM,
+  WATER_GAP_MIN_BETWEEN_KM,
+} from '../config';
 
 export const FOOD_TYPES = ['paczkomat', 'zabka', 'biedronka', 'shop'];
 const WATER_TYPES = ['water'];
@@ -92,17 +102,17 @@ function analyzeGaps(
 }
 
 const FOOD_THRESHOLDS: GapThresholds = {
-  safe: 30,
-  caution: 50,
-  minEdgeGap: 5,
-  minBetweenGap: 20,
+  safe: FOOD_GAP_SAFE_KM,
+  caution: FOOD_GAP_CAUTION_KM,
+  minEdgeGap: FOOD_GAP_MIN_EDGE_KM,
+  minBetweenGap: FOOD_GAP_MIN_BETWEEN_KM,
 };
 
 const WATER_THRESHOLDS: GapThresholds = {
-  safe: 20,
-  caution: 40,
-  minEdgeGap: 10,
-  minBetweenGap: 15,
+  safe: WATER_GAP_SAFE_KM,
+  caution: WATER_GAP_CAUTION_KM,
+  minEdgeGap: WATER_GAP_MIN_EDGE_KM,
+  minBetweenGap: WATER_GAP_MIN_BETWEEN_KM,
 };
 
 /**

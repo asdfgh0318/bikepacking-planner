@@ -1,4 +1,4 @@
-import { CloudSun, CloudRain, Wind, Thermometer, AlertTriangle, Droplets } from 'lucide-react';
+import { CloudSun, CloudOff, CloudRain, Wind, Thermometer, AlertTriangle, Droplets } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
@@ -111,13 +111,24 @@ export function WeatherPanel() {
     );
   }
 
-  if (!routeWeather || routeWeather.days.every((d) => d.weatherCode === -1)) {
+  if (!routeWeather || routeWeather.forecastAvailable === false || routeWeather.days.every((d) => d.weatherCode === -1)) {
+    const isTooFarOut = routeWeather?.forecastAvailable === false;
     return (
       <div className="panel">
         <EmptyState
-          icon={<CloudSun size={40} strokeWidth={1.5} color="#60a5fa" opacity={0.6} />}
-          message="Forecast not available"
-          hint={!tripStartDate ? 'Set a trip start date in the Shop tab' : 'Forecasts available only within 16 days'}
+          icon={
+            isTooFarOut
+              ? <CloudOff size={40} strokeWidth={1.5} color="#94a3b8" opacity={0.7} />
+              : <CloudSun size={40} strokeWidth={1.5} color="#60a5fa" opacity={0.6} />
+          }
+          message={isTooFarOut ? 'Weather forecast not yet available' : 'Forecast not available'}
+          hint={
+            !tripStartDate
+              ? 'Set a trip start date in the Shop tab'
+              : isTooFarOut
+                ? 'Weather forecasts are available for trips starting within 16 days. Check back closer to your departure.'
+                : 'Could not load forecast data'
+          }
         />
       </div>
     );

@@ -1,23 +1,11 @@
+import React from 'react';
 import { AlertTriangle, Wrench, CloudRain, Wind, Thermometer } from 'lucide-react';
 import type { UnifiedShoppingPlan } from '../../types';
 import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { generateMaintenanceReminders } from '../../services/maintenance';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
-
-const STOP_COLORS: Record<string, string> = {
-  paczkomat: '#fbbf24',
-  zabka: '#4ade80',
-  biedronka: '#f87171',
-  shop: '#60a5fa',
-};
-
-const STOP_ICONS: Record<string, string> = {
-  paczkomat: 'P',
-  zabka: 'Ż',
-  biedronka: 'B',
-  shop: 'S',
-};
+import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS } from '../../constants/supplyTypes';
 
 /**
  * Format a decimal hour (e.g. 14.5) as "HH:MM" (e.g. "14:30").
@@ -40,7 +28,7 @@ function arrivalTimeClass(decimalHour: number): string {
   return 'timeline-arrival timeline-arrival-green';
 }
 
-export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
+export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
   const daySegments = useRouteStore((s) => s.daySegments);
   const routeWeather = useResupplyStore((s) => s.routeWeather);
   const reminders = generateMaintenanceReminders(daySegments);
@@ -85,9 +73,9 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
             <div key={`${stop.stopId}-${i}`} className="timeline-stop">
               <span
                 className="timeline-badge"
-                style={{ background: STOP_COLORS[stop.stopType] || '#60a5fa' }}
+                style={{ background: (SUPPLY_COLORS[stop.stopType] || SUPPLY_COLORS.shop).bg }}
               >
-                {stop.source === 'paczkomat' ? 'P' : STOP_ICONS[stop.stopType] || 'S'}
+                {stop.source === 'paczkomat' ? 'P' : SUPPLY_BADGE_LETTERS[stop.stopType] || 'S'}
               </span>
               <div className="timeline-stop-info">
                 <div className="timeline-stop-name">
@@ -188,4 +176,4 @@ export function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
       )}
     </div>
   );
-}
+});

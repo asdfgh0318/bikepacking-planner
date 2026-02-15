@@ -1,4 +1,4 @@
-import * as turf from '@turf/turf';
+import { lineString, length, along, point, distance } from '@turf/turf';
 import type { DaySegment, Difficulty, NightStop, SupplyPoint, RoutingProfile } from '../types';
 
 // Base speeds by routing profile (km/h, loaded bikepacking)
@@ -98,8 +98,8 @@ export function splitRouteIntoDays(
   supplyPoints: SupplyPoint[],
   routingProfile: RoutingProfile = 'trekking'
 ): DaySegment[] {
-  const line = turf.lineString(routeGeometry.coordinates);
-  const totalLength = turf.length(line, { units: 'kilometers' });
+  const line = lineString(routeGeometry.coordinates);
+  const totalLength = length(line, { units: 'kilometers' });
 
   if (totalLength === 0) return [];
 
@@ -135,8 +135,8 @@ export function splitRouteIntoDays(
     }
 
     // Get start and end coordinates along the route
-    const startPoint = turf.along(line, currentKm, { units: 'kilometers' });
-    const endPoint = turf.along(line, bestEnd, { units: 'kilometers' });
+    const startPoint = along(line, currentKm, { units: 'kilometers' });
+    const endPoint = along(line, bestEnd, { units: 'kilometers' });
 
     // Calculate elevation for this segment
     const { ascent, descent } = getSegmentElevation(routeGeometry, currentKm, bestEnd);
@@ -194,9 +194,9 @@ function getSegmentElevation(
 
   for (let i = 0; i < coords.length; i++) {
     if (i > 0) {
-      const from = turf.point(coords[i - 1]);
-      const to = turf.point(coords[i]);
-      cumulativeKm += turf.distance(from, to, { units: 'kilometers' });
+      const from = point(coords[i - 1]);
+      const to = point(coords[i]);
+      cumulativeKm += distance(from, to, { units: 'kilometers' });
     }
 
     // Skip coordinates before the segment start

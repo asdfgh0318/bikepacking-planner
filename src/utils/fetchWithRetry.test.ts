@@ -59,7 +59,7 @@ describe('fetchWithRetry', () => {
 
     const promise = fetchWithRetry('https://api.example.com/data');
 
-    // First attempt fails immediately, backoff = 1000ms (1s * 2^0)
+    // First attempt fails immediately, max jittered backoff = 1000ms (base 1s * 2^0)
     await vi.advanceTimersByTimeAsync(1000);
 
     const res = await promise;
@@ -77,9 +77,9 @@ describe('fetchWithRetry', () => {
 
     const promise = fetchWithRetry('https://api.example.com/data');
 
-    // After attempt 0: backoff = 1000ms (1s * 2^0)
+    // After attempt 0: max jittered backoff = 1000ms (base 1s * 2^0)
     await vi.advanceTimersByTimeAsync(1000);
-    // After attempt 1: backoff = 2000ms (1s * 2^1)
+    // After attempt 1: max jittered backoff = 2000ms (base 1s * 2^1)
     await vi.advanceTimersByTimeAsync(2000);
 
     const res = await promise;
@@ -96,6 +96,7 @@ describe('fetchWithRetry', () => {
 
     const promise = fetchWithRetry('https://api.example.com/data');
 
+    // Max jittered backoff for attempt 0 = 1000ms
     await vi.advanceTimersByTimeAsync(1000);
 
     const res = await promise;
@@ -125,13 +126,15 @@ describe('fetchWithRetry', () => {
   });
 
   it('throws immediately on AbortError without retrying', async () => {
+    const controller = new AbortController();
+    controller.abort();
     const abortError = new DOMException('The operation was aborted.', 'AbortError');
     const mockFetch = vi.fn().mockRejectedValue(abortError);
     vi.stubGlobal('fetch', mockFetch);
 
-    await expect(fetchWithRetry('https://api.example.com/data')).rejects.toThrow(
-      'The operation was aborted.',
-    );
+    await expect(
+      fetchWithRetry('https://api.example.com/data', { signal: controller.signal }),
+    ).rejects.toThrow('The operation was aborted.');
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -158,7 +161,7 @@ describe('fetchWithRetry', () => {
 
     const promise = fetchWithRetry('https://api.example.com/data', { maxRetries: 2 });
 
-    // After attempt 0: backoff = 1s
+    // Max jittered backoff for attempt 0 = 1000ms
     await vi.advanceTimersByTimeAsync(1000);
 
     const res = await promise;
@@ -178,11 +181,14 @@ describe('fetchWithRetry', () => {
       body: JSON.stringify({ key: 'value' }),
     });
 
-    expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: 'value' }),
-    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://api.example.com/data',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'value' }),
+      }),
+    );
   });
 
   it('defaults to maxRetries=3 when not specified', async () => {
@@ -209,5 +215,104 @@ describe('fetchWithRetry', () => {
 
     expect(err.message).toBe('fail');
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Timeout tests
+  // -------------------------------------------------------------------------
+
+  it('rejects with TimeoutError when fetch exceeds timeout', async () => {
+    // A fetch that hangs until the signal is aborted (like a real slow server)
+    const mockFetch = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        }),
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    const promise = fetchWithRetry('https://api.example.com/slow', {
+      timeout: 5000,
+      maxRetries: 1,
+    });
+
+    // Guard against unhandled rejection
+    let caughtError: unknown;
+    const guarded = promise.catch((err: unknown) => { caughtError = err; });
+
+    // Advance past the timeout
+    await vi.advanceTimersByTimeAsync(5000);
+    await guarded;
+
+    expect(caughtError).toBeInstanceOf(DOMException);
+    expect((caughtError as DOMException).name).toBe('TimeoutError');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry after a timeout error', async () => {
+    const mockFetch = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        }),
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    const promise = fetchWithRetry('https://api.example.com/slow', {
+      timeout: 2000,
+      maxRetries: 3,
+    });
+
+    // Guard against unhandled rejection
+    let caughtError: unknown;
+    const guarded = promise.catch((err: unknown) => { caughtError = err; });
+
+    await vi.advanceTimersByTimeAsync(2000);
+    await guarded;
+
+    expect(caughtError).toBeInstanceOf(DOMException);
+    expect((caughtError as DOMException).name).toBe('TimeoutError');
+    // Should only attempt once — timeout is not retried
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Jitter tests
+  // -------------------------------------------------------------------------
+
+  it('applies jitter to backoff delays within the expected range', async () => {
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+
+    const mockFetch = vi.fn()
+      .mockRejectedValueOnce(new Error('fail'))   // attempt 0 -> backoff
+      .mockRejectedValueOnce(new Error('fail'))   // attempt 1 -> backoff
+      .mockRejectedValueOnce(new Error('fail'));   // attempt 2 -> done
+    vi.stubGlobal('fetch', mockFetch);
+
+    // Disable timeout so its setTimeout doesn't pollute the spy
+    const promise = fetchWithRetry('https://api.example.com/data', { maxRetries: 3, timeout: 0 });
+    const err = await drainAndExpectRejection(promise);
+    expect(err.message).toBe('fail');
+
+    // Collect the setTimeout delay arguments used for backoff
+    // Filter out non-backoff setTimeout calls (delay 0 or undefined)
+    const backoffDelays = setTimeoutSpy.mock.calls
+      .map((call) => call[1] as number)
+      .filter((delay) => delay !== undefined && delay > 0);
+
+    // We expect exactly 2 backoff delays (between attempt 0-1 and 1-2)
+    expect(backoffDelays).toHaveLength(2);
+
+    // Attempt 0: base = 1000, jittered range = [500, 1000]
+    expect(backoffDelays[0]).toBeGreaterThanOrEqual(500);
+    expect(backoffDelays[0]).toBeLessThanOrEqual(1000);
+
+    // Attempt 1: base = 2000, jittered range = [1000, 2000]
+    expect(backoffDelays[1]).toBeGreaterThanOrEqual(1000);
+    expect(backoffDelays[1]).toBeLessThanOrEqual(2000);
   });
 });

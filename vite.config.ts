@@ -39,8 +39,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // Cache CyclOSM map tiles
-            urlPattern: /^https:\/\/.*tile-cyclosm\.openstreetmap\.fr\/.*/i,
+            // Cache OpenFreeMap vector tiles
+            urlPattern: /^https:\/\/tiles\.openfreemap\.org\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'map-tiles',
