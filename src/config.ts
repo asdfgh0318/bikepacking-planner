@@ -19,6 +19,12 @@ export const OVERPASS_TIMEOUT_MS = 30_000;
 /** Overpass server-side query timeout (seconds), embedded in the QL query. */
 export const OVERPASS_QUERY_TIMEOUT_S = 25;
 
+/** Overpass API endpoints, tried in order for failover. */
+export const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
+
 // ---------------------------------------------------------------------------
 // Weather
 // ---------------------------------------------------------------------------
@@ -113,8 +119,25 @@ export const PACZKOMAT_LARGE_LOCKER_BONUS = 2;
 export const PACZKOMAT_PARCEL_TARGET_CALS = 800;
 
 // ---------------------------------------------------------------------------
+// Overpass Route Sampling
+// ---------------------------------------------------------------------------
+
+/** Number of route points to sample for Overpass 'around' filter. */
+export const OVERPASS_ROUTE_SAMPLE_POINTS = 80;
+
+// ---------------------------------------------------------------------------
 // GPX
 // ---------------------------------------------------------------------------
 
 /** Maximum waypoints kept when importing a GPX file (downsampled if exceeded). */
 export const MAX_GPX_WAYPOINTS = 50;
+
+// ---------------------------------------------------------------------------
+// SQLite POI Cache
+// ---------------------------------------------------------------------------
+
+/** SQLite POI cache TTL (ms). 7 days for Overpass data. */
+export const POI_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** InPost cache TTL (ms). 1 day (locations change more often). */
+export const INPOST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;

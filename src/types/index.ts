@@ -63,19 +63,24 @@ export interface SupplyPoint {
   name: string;
   lat: number;
   lng: number;
-  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite' | 'repair' | 'train_station' | 'bus_stop' | 'hospital';
+  type: 'paczkomat' | 'zabka' | 'biedronka' | 'shop' | 'water' | 'campsite' | 'repair' | 'train_station' | 'bus_stop' | 'hospital' | 'supermarket' | 'convenience' | 'fuel' | 'bakery' | 'cafe' | 'restaurant' | 'pharmacy' | 'toilets' | 'compressed_air' | 'halt' | 'alpine_hut' | 'basic_shelter';
   distanceFromStartKm: number;
   details?: {
     address?: string;
     openingHours?: string;
     is24h?: boolean;
     lockerSize?: string[];
-    waterType?: 'spring' | 'drinking_water' | 'fountain' | 'tap' | 'stream';
-    campsiteType?: 'camp_site' | 'shelter' | 'wilderness_hut' | 'bivouac';
+    waterType?: 'spring' | 'drinking_water' | 'fountain' | 'tap' | 'stream' | 'water_point' | 'water_well';
+    campsiteType?: 'camp_site' | 'shelter' | 'wilderness_hut' | 'bivouac' | 'alpine_hut' | 'basic_shelter';
     capacity?: string;
     fee?: boolean;
     repairType?: 'shop' | 'repair_station';
     phone?: string;
+    brand?: string;
+    operator?: string;
+    website?: string;
+    hasToilet?: boolean;
+    hasWater?: boolean;
   };
 }
 

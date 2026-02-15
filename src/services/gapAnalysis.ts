@@ -11,8 +11,8 @@ import {
 } from '../config';
 import { distanceKm } from '../utils/distance';
 
-export const FOOD_TYPES = ['paczkomat', 'zabka', 'biedronka', 'shop'];
-const WATER_TYPES = ['water'];
+export const FOOD_TYPES = ['paczkomat', 'zabka', 'biedronka', 'shop', 'supermarket', 'convenience', 'bakery', 'cafe', 'restaurant', 'fuel'];
+const WATER_TYPES = ['water', 'water_point', 'water_well'];
 
 interface GapThresholds {
   safe: number;      // below this km = 'safe'

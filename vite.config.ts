@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.ts'],
   },
+  optimizeDeps: {
+    exclude: ['sql.js'],
+  },
   plugins: [
     react(),
     VitePWA({
@@ -36,7 +39,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,wasm}'],
         runtimeCaching: [
           {
             // Cache OpenFreeMap vector tiles

@@ -293,6 +293,11 @@ export function SupplyPanel() {
                     {pt.details.phone && ` · ${pt.details.phone}`}
                   </div>
                 )}
+                {pt.details?.hasToilet && <span className="tag tag-24h">WC</span>}
+                {pt.details?.hasWater && <span className="tag tag-24h">Water</span>}
+                {pt.type === 'fuel' && pt.details?.brand && (
+                  <div className="supply-item-address">{pt.details.brand}</div>
+                )}
                 {pt.details?.address && (
                   <div className="supply-item-address">{pt.details.address}</div>
                 )}

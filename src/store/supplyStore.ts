@@ -12,6 +12,11 @@ interface SupplyState {
   showCampsites: boolean;
   showRepair: boolean;
   showBailOut: boolean;
+  showFuel: boolean;
+  showFood: boolean;
+  showPharmacy: boolean;
+  showToilets: boolean;
+  showHalts: boolean;
   bailOutPoints: SupplyPoint[];
   isLoading: boolean;
 
@@ -25,6 +30,11 @@ interface SupplyState {
   setShowCampsites: (v: boolean) => void;
   setShowRepair: (v: boolean) => void;
   setShowBailOut: (v: boolean) => void;
+  setShowFuel: (v: boolean) => void;
+  setShowFood: (v: boolean) => void;
+  setShowPharmacy: (v: boolean) => void;
+  setShowToilets: (v: boolean) => void;
+  setShowHalts: (v: boolean) => void;
   setBailOutPoints: (pts: SupplyPoint[]) => void;
   setIsLoading: (v: boolean) => void;
 }
@@ -40,6 +50,11 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   showCampsites: true,
   showRepair: true,
   showBailOut: true,
+  showFuel: true,
+  showFood: false,
+  showPharmacy: false,
+  showToilets: false,
+  showHalts: true,
   bailOutPoints: [],
   isLoading: false,
 
@@ -53,6 +68,11 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   setShowCampsites: (v) => set({ showCampsites: v }),
   setShowRepair: (v) => set({ showRepair: v }),
   setShowBailOut: (v) => set({ showBailOut: v }),
+  setShowFuel: (v) => set({ showFuel: v }),
+  setShowFood: (v) => set({ showFood: v }),
+  setShowPharmacy: (v) => set({ showPharmacy: v }),
+  setShowToilets: (v) => set({ showToilets: v }),
+  setShowHalts: (v) => set({ showHalts: v }),
   setBailOutPoints: (pts) => set({ bailOutPoints: pts }),
   setIsLoading: (v) => set({ isLoading: v }),
 }));

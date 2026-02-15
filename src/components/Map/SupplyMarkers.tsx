@@ -31,6 +31,11 @@ export function SupplyMarkers() {
   const showCampsites = useSupplyStore((s) => s.showCampsites);
   const showRepair = useSupplyStore((s) => s.showRepair);
   const showBailOut = useSupplyStore((s) => s.showBailOut);
+  const showFuel = useSupplyStore((s) => s.showFuel);
+  const showFood = useSupplyStore((s) => s.showFood);
+  const showPharmacy = useSupplyStore((s) => s.showPharmacy);
+  const showToilets = useSupplyStore((s) => s.showToilets);
+  const showHalts = useSupplyStore((s) => s.showHalts);
   const bailOutPoints = useSupplyStore((s) => s.bailOutPoints);
   const daySegments = useRouteStore((s) => s.daySegments);
   const [popupPoint, setPopupPoint] = useState<SupplyPoint | null>(null);
@@ -50,9 +55,17 @@ export function SupplyMarkers() {
       if (p.type === 'paczkomat' && !showPaczkomaty) return false;
       if (p.type === 'water' && !showWater) return false;
       if (p.type === 'campsite' && !showCampsites) return false;
+      if (['alpine_hut', 'basic_shelter'].includes(p.type) && !showCampsites) return false;
       if (p.type === 'repair' && !showRepair) return false;
+      if (p.type === 'compressed_air' && !showRepair) return false;
       if (['train_station', 'hospital'].includes(p.type) && !showBailOut) return false;
-      if (!['paczkomat', 'water', 'campsite', 'repair', 'train_station', 'hospital'].includes(p.type) && !showShops) return false;
+      if (p.type === 'fuel' && !showFuel) return false;
+      if (['bakery', 'cafe', 'restaurant'].includes(p.type) && !showFood) return false;
+      if (p.type === 'pharmacy' && !showPharmacy) return false;
+      if (p.type === 'toilets' && !showToilets) return false;
+      if (p.type === 'halt' && !showHalts) return false;
+      if (['supermarket', 'convenience'].includes(p.type) && !showShops) return false;
+      if (!['paczkomat', 'water', 'campsite', 'alpine_hut', 'basic_shelter', 'repair', 'compressed_air', 'train_station', 'hospital', 'fuel', 'bakery', 'cafe', 'restaurant', 'pharmacy', 'toilets', 'halt', 'supermarket', 'convenience'].includes(p.type) && !showShops) return false;
 
       // Filter campsites/shelters to only show near predicted night stops
       if (p.type === 'campsite' && nightStopCoords.length > 0) {
@@ -64,7 +77,7 @@ export function SupplyMarkers() {
 
       return true;
     });
-  }, [supplyPoints, bailOutPoints, showPaczkomaty, showShops, showWater, showCampsites, showRepair, showBailOut, nightStopCoords]);
+  }, [supplyPoints, bailOutPoints, showPaczkomaty, showShops, showWater, showCampsites, showRepair, showBailOut, showFuel, showFood, showPharmacy, showToilets, showHalts, nightStopCoords]);
 
   return (
     <>
@@ -132,6 +145,12 @@ export function SupplyMarkers() {
                 {popupPoint.details.repairType === 'repair_station' ? 'Self-service station' : 'Bike shop'}
                 {popupPoint.details.phone && ` · ${popupPoint.details.phone}`}
               </div>
+            )}
+            {popupPoint.details?.hasToilet && (
+              <div className="popup-detail">WC available</div>
+            )}
+            {popupPoint.details?.hasWater && (
+              <div className="popup-detail">Water available</div>
             )}
             {popupPoint.details?.address && (
               <div className="popup-detail popup-detail--address">

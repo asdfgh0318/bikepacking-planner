@@ -1,365 +1,207 @@
 import { fetchWithRetry } from '../utils/fetchWithRetry';
-import { OVERPASS_TIMEOUT_MS, OVERPASS_QUERY_TIMEOUT_S } from '../config';
+import {
+  OVERPASS_TIMEOUT_MS,
+  OVERPASS_QUERY_TIMEOUT_S,
+  OVERPASS_ENDPOINTS,
+} from '../config';
+import { classifyElements, type OverpassElement } from './poiClassifier';
+import { debugLog } from '../utils/debugLogger';
+import type { SupplyPoint } from '../types';
 
-const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
+// ---------------------------------------------------------------------------
+// Query builders
+// ---------------------------------------------------------------------------
 
-interface OverpassElement {
-  type: string;
-  id: number;
-  lat: number;
-  lon: number;
-  tags: Record<string, string>;
+/**
+ * Build a single Overpass QL union query covering ALL supply POI types.
+ * Uses the `around` filter with a downsampled route polyline.
+ */
+export function buildUnifiedSupplyQuery(polyline: string, radiusM: number): string {
+  return `[out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
+(
+  // Shops - branded
+  node["brand:wikidata"="Q2874810"](around:${radiusM},${polyline});
+  node["brand:wikidata"="Q857855"](around:${radiusM},${polyline});
+  // Shops - generic
+  node["shop"="supermarket"](around:${radiusM},${polyline});
+  way["shop"="supermarket"](around:${radiusM},${polyline});
+  node["shop"="convenience"](around:${radiusM},${polyline});
+  node["shop"="bakery"](around:${radiusM},${polyline});
+  // Food service
+  node["amenity"="cafe"](around:${radiusM},${polyline});
+  node["amenity"="restaurant"](around:${radiusM},${polyline});
+  node["amenity"="fuel"](around:${radiusM},${polyline});
+  way["amenity"="fuel"](around:${radiusM},${polyline});
+  // Water
+  node["natural"="spring"](around:${radiusM},${polyline});
+  node["amenity"="drinking_water"](around:${radiusM},${polyline});
+  node["amenity"="fountain"]["drinking_water"="yes"](around:${radiusM},${polyline});
+  node["man_made"="water_tap"](around:${radiusM},${polyline});
+  node["amenity"="water_point"](around:${radiusM},${polyline});
+  node["man_made"="water_well"]["drinking_water"="yes"](around:${radiusM},${polyline});
+  // Camping
+  node["tourism"="camp_site"](around:${radiusM},${polyline});
+  way["tourism"="camp_site"](around:${radiusM},${polyline});
+  node["tourism"="wilderness_hut"](around:${radiusM},${polyline});
+  way["tourism"="wilderness_hut"](around:${radiusM},${polyline});
+  node["tourism"="alpine_hut"](around:${radiusM},${polyline});
+  node["amenity"="shelter"](around:${radiusM},${polyline});
+  way["amenity"="shelter"](around:${radiusM},${polyline});
+  node["camp_site"="bivouac"](around:${radiusM},${polyline});
+  // Repair
+  node["shop"="bicycle"](around:${radiusM},${polyline});
+  way["shop"="bicycle"](around:${radiusM},${polyline});
+  node["amenity"="bicycle_repair_station"](around:${radiusM},${polyline});
+  node["amenity"="compressed_air"](around:${radiusM},${polyline});
+  // Medical/hygiene
+  node["amenity"="pharmacy"](around:${radiusM},${polyline});
+  node["amenity"="toilets"](around:${radiusM},${polyline});
+);
+out center;`;
 }
 
-export interface ShopPoint {
-  id: number;
-  lat: number;
-  lng: number;
-  name: string;
-  brand: string;
-  openingHours?: string;
+/**
+ * Build an Overpass QL query for bail-out points (train stations, halts, hospitals).
+ * Typically called with a wider radius than supply queries.
+ */
+export function buildBailOutQuery(polyline: string, radiusM: number): string {
+  return `[out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
+(
+  node["railway"="station"]["name"](around:${radiusM},${polyline});
+  node["railway"="halt"]["name"](around:${radiusM},${polyline});
+  node["amenity"="hospital"]["name"](around:${radiusM},${polyline});
+  way["amenity"="hospital"]["name"](around:${radiusM},${polyline});
+);
+out center;`;
 }
 
-export async function fetchShopsNearBbox(bounds: {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}, signal?: AbortSignal): Promise<ShopPoint[]> {
-  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+// ---------------------------------------------------------------------------
+// Endpoint failover
+// ---------------------------------------------------------------------------
 
-  // Query Żabka and Biedronka using brand:wikidata for reliability
-  const query = `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
-    (
-      node["brand:wikidata"="Q2874810"](${bbox});
-      node["brand:wikidata"="Q857855"](${bbox});
-    );
-    out center;
-  `;
+/**
+ * Execute an Overpass QL query, trying each endpoint in order.
+ * Uses fetchWithRetry for per-endpoint retries. On caller abort, throws immediately.
+ */
+export async function queryOverpassWithFailover(
+  query: string,
+  signal?: AbortSignal,
+): Promise<OverpassElement[]> {
+  let lastError: unknown;
 
-  const res = await fetchWithRetry(OVERPASS_API, {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    signal,
-    timeout: OVERPASS_TIMEOUT_MS,
-  });
+  for (let i = 0; i < OVERPASS_ENDPOINTS.length; i++) {
+    const endpoint = OVERPASS_ENDPOINTS[i];
 
-  if (!res.ok) {
-    throw new Error(`Overpass error: ${res.status}`);
-  }
+    // If the caller already aborted, bail out immediately
+    if (signal?.aborted) {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }
 
-  const data = await res.json();
-  const elements: OverpassElement[] = data?.elements ?? [];
-  const results: ShopPoint[] = [];
-  for (const el of elements) {
     try {
-      if (typeof el.lat !== 'number' || typeof el.lon !== 'number' || isNaN(el.lat) || isNaN(el.lon)) continue;
-      results.push({
-        id: el.id,
-        lat: el.lat,
-        lng: el.lon,
-        name: el.tags?.name || el.tags?.brand || 'Shop',
-        brand: el.tags?.brand || 'unknown',
-        openingHours: el.tags?.opening_hours,
+      debugLog.debug('overpass', 'query:attempt', { endpoint, endpointIndex: i });
+
+      const res = await fetchWithRetry(endpoint, {
+        method: 'POST',
+        body: `data=${encodeURIComponent(query)}`,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        signal,
+        timeout: OVERPASS_TIMEOUT_MS,
       });
-    } catch {
-      // Skip malformed element
-      continue;
+
+      if (!res.ok) {
+        throw new Error(`Overpass error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      const elements: OverpassElement[] = data?.elements ?? [];
+
+      debugLog.info('overpass', 'query:success', {
+        endpoint,
+        elementCount: elements.length,
+      });
+
+      return elements;
+    } catch (err) {
+      // On caller abort, throw immediately — do not try next endpoint
+      if (signal?.aborted) {
+        throw new DOMException('The operation was aborted.', 'AbortError');
+      }
+
+      lastError = err;
+      debugLog.warn('overpass', 'query:endpoint-failed', {
+        endpoint,
+        error: err instanceof Error ? err.message : String(err),
+        willRetryNext: i < OVERPASS_ENDPOINTS.length - 1,
+      });
     }
   }
-  return results;
+
+  // All endpoints exhausted
+  debugLog.error('overpass', 'query:all-endpoints-failed', {
+    endpointCount: OVERPASS_ENDPOINTS.length,
+    lastError: lastError instanceof Error ? lastError.message : String(lastError),
+  });
+  throw lastError;
 }
 
-export interface WaterPoint {
-  id: number;
-  lat: number;
-  lng: number;
-  name: string;
-  waterType: 'spring' | 'drinking_water' | 'fountain' | 'tap' | 'stream';
-}
+// ---------------------------------------------------------------------------
+// Convenience wrappers
+// ---------------------------------------------------------------------------
 
-export async function fetchWaterSourcesNearBbox(bounds: {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}, signal?: AbortSignal): Promise<WaterPoint[]> {
-  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+/**
+ * Fetch all supply POIs along a route polyline.
+ * Builds a unified query, runs it with failover, and classifies results via poiClassifier.
+ *
+ * @param polyline    Overpass-formatted polyline string ("lat1,lon1,lat2,lon2,...")
+ * @param corridorWidthKm  Corridor half-width in km (converted to metres for the query)
+ * @param signal      Optional AbortSignal for cancellation
+ */
+export async function fetchSupplyPOIs(
+  polyline: string,
+  corridorWidthKm: number,
+  signal?: AbortSignal,
+): Promise<Omit<SupplyPoint, 'distanceFromStartKm'>[]> {
+  const radiusM = Math.round(corridorWidthKm * 1000);
+  const query = buildUnifiedSupplyQuery(polyline, radiusM);
 
-  const query = `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
-    (
-      node["natural"="spring"](${bbox});
-      node["amenity"="drinking_water"](${bbox});
-      node["amenity"="fountain"]["drinking_water"="yes"](${bbox});
-      node["man_made"="water_tap"](${bbox});
-    );
-    out center;
-  `;
+  debugLog.info('overpass', 'fetchSupplyPOIs:start', { radiusM, polylineLength: polyline.length });
 
-  const res = await fetchWithRetry(OVERPASS_API, {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    signal,
-    timeout: OVERPASS_TIMEOUT_MS,
+  const elements = await queryOverpassWithFailover(query, signal);
+  const classified = classifyElements(elements);
+
+  debugLog.info('overpass', 'fetchSupplyPOIs:done', {
+    rawElements: elements.length,
+    classified: classified.length,
   });
 
-  if (!res.ok) {
-    throw new Error(`Overpass error: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const elements: OverpassElement[] = data?.elements ?? [];
-  const results: WaterPoint[] = [];
-  for (const el of elements) {
-    try {
-      if (typeof el.lat !== 'number' || typeof el.lon !== 'number' || isNaN(el.lat) || isNaN(el.lon)) continue;
-
-      let waterType: WaterPoint['waterType'] = 'drinking_water';
-      if (el.tags?.natural === 'spring') waterType = 'spring';
-      else if (el.tags?.amenity === 'fountain') waterType = 'fountain';
-      else if (el.tags?.man_made === 'water_tap') waterType = 'tap';
-
-      results.push({
-        id: el.id,
-        lat: el.lat,
-        lng: el.lon,
-        name: el.tags?.name || waterType.replace('_', ' '),
-        waterType,
-      });
-    } catch {
-      // Skip malformed element
-      continue;
-    }
-  }
-  return results;
+  return classified;
 }
 
-export interface CampsitePoint {
-  id: number;
-  lat: number;
-  lng: number;
-  name: string;
-  campsiteType: 'camp_site' | 'shelter' | 'wilderness_hut' | 'bivouac';
-  capacity?: string;
-  fee: boolean;
-  openingHours?: string;
-}
+/**
+ * Fetch bail-out POIs (train stations, halts, hospitals) along a route polyline.
+ * Uses a wider radius: corridorWidthKm + 5 km.
+ *
+ * @param polyline    Overpass-formatted polyline string
+ * @param corridorWidthKm  Base corridor half-width in km (5 km is added automatically)
+ * @param signal      Optional AbortSignal for cancellation
+ */
+export async function fetchBailOutPOIs(
+  polyline: string,
+  corridorWidthKm: number,
+  signal?: AbortSignal,
+): Promise<Omit<SupplyPoint, 'distanceFromStartKm'>[]> {
+  const radiusM = Math.round((corridorWidthKm + 5) * 1000);
+  const query = buildBailOutQuery(polyline, radiusM);
 
-export async function fetchCampsitesNearBbox(bounds: {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}, signal?: AbortSignal): Promise<CampsitePoint[]> {
-  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
+  debugLog.info('overpass', 'fetchBailOutPOIs:start', { radiusM, polylineLength: polyline.length });
 
-  const query = `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
-    (
-      node["tourism"="camp_site"](${bbox});
-      way["tourism"="camp_site"](${bbox});
-      node["tourism"="wilderness_hut"](${bbox});
-      way["tourism"="wilderness_hut"](${bbox});
-      node["amenity"="shelter"](${bbox});
-      way["amenity"="shelter"](${bbox});
-      node["camp_site"="bivouac"](${bbox});
-    );
-    out center;
-  `;
+  const elements = await queryOverpassWithFailover(query, signal);
+  const classified = classifyElements(elements);
 
-  const res = await fetchWithRetry(OVERPASS_API, {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    signal,
-    timeout: OVERPASS_TIMEOUT_MS,
+  debugLog.info('overpass', 'fetchBailOutPOIs:done', {
+    rawElements: elements.length,
+    classified: classified.length,
   });
 
-  if (!res.ok) {
-    throw new Error(`Overpass error: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const elements: OverpassElement[] = data?.elements ?? [];
-  const results: CampsitePoint[] = [];
-  for (const el of elements) {
-    try {
-      // For way elements, use center coordinates
-      const lat = el.lat || (el as any).center?.lat;
-      const lon = el.lon || (el as any).center?.lon;
-      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
-
-      let campsiteType: CampsitePoint['campsiteType'] = 'camp_site';
-      if (el.tags?.tourism === 'wilderness_hut') campsiteType = 'wilderness_hut';
-      else if (el.tags?.amenity === 'shelter') campsiteType = 'shelter';
-      else if (el.tags?.camp_site === 'bivouac') campsiteType = 'bivouac';
-
-      const label = campsiteType === 'camp_site' ? 'Campsite'
-        : campsiteType === 'wilderness_hut' ? 'Wilderness hut'
-        : campsiteType === 'shelter' ? 'Shelter'
-        : 'Bivouac';
-
-      results.push({
-        id: el.id,
-        lat,
-        lng: lon,
-        name: el.tags?.name || label,
-        campsiteType,
-        capacity: el.tags?.capacity,
-        fee: el.tags?.fee !== 'no',
-        openingHours: el.tags?.opening_hours,
-      });
-    } catch {
-      // Skip malformed element
-      continue;
-    }
-  }
-  return results;
-}
-
-export interface RepairPoint {
-  id: number;
-  lat: number;
-  lng: number;
-  name: string;
-  repairType: 'shop' | 'repair_station';
-  phone?: string;
-  openingHours?: string;
-}
-
-export async function fetchRepairShopsNearBbox(bounds: {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}, signal?: AbortSignal): Promise<RepairPoint[]> {
-  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-
-  const query = `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
-    (
-      node["shop"="bicycle"](${bbox});
-      way["shop"="bicycle"](${bbox});
-      node["amenity"="bicycle_repair_station"](${bbox});
-    );
-    out center;
-  `;
-
-  const res = await fetchWithRetry(OVERPASS_API, {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    signal,
-    timeout: OVERPASS_TIMEOUT_MS,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Overpass error: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const elements: OverpassElement[] = data?.elements ?? [];
-  const results: RepairPoint[] = [];
-  for (const el of elements) {
-    try {
-      const lat = el.lat || (el as any).center?.lat;
-      const lon = el.lon || (el as any).center?.lon;
-      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
-
-      const isStation = el.tags?.amenity === 'bicycle_repair_station';
-
-      results.push({
-        id: el.id,
-        lat,
-        lng: lon,
-        name: el.tags?.name || (isStation ? 'Repair station' : 'Bike shop'),
-        repairType: isStation ? 'repair_station' as const : 'shop' as const,
-        phone: el.tags?.phone || el.tags?.['contact:phone'],
-        openingHours: el.tags?.opening_hours,
-      });
-    } catch {
-      // Skip malformed element
-      continue;
-    }
-  }
-  return results;
-}
-
-// Bail-out points: train stations, bus stops, hospitals
-export type BailOutType = 'train_station' | 'bus_stop' | 'hospital';
-
-export interface BailOutPoint {
-  id: number;
-  lat: number;
-  lng: number;
-  name: string;
-  bailOutType: BailOutType;
-  phone?: string;
-}
-
-export async function fetchBailOutPointsNearBbox(bounds: {
-  north: number;
-  south: number;
-  east: number;
-  west: number;
-}, signal?: AbortSignal): Promise<BailOutPoint[]> {
-  const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-
-  // Only major rail stations (with names) and hospitals — skip halts & bus stops to reduce clutter
-  const query = `
-    [out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
-    (
-      node["railway"="station"]["name"](${bbox});
-      node["amenity"="hospital"]["name"](${bbox});
-      way["amenity"="hospital"]["name"](${bbox});
-    );
-    out center;
-  `;
-
-  const res = await fetchWithRetry(OVERPASS_API, {
-    method: 'POST',
-    body: `data=${encodeURIComponent(query)}`,
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    signal,
-    timeout: OVERPASS_TIMEOUT_MS,
-  });
-
-  if (!res.ok) {
-    throw new Error(`Overpass error: ${res.status}`);
-  }
-
-  const data = await res.json();
-  const elements: OverpassElement[] = data?.elements ?? [];
-  const results: BailOutPoint[] = [];
-  for (const el of elements) {
-    try {
-      const lat = el.lat || (el as any).center?.lat;
-      const lon = el.lon || (el as any).center?.lon;
-      if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) continue;
-
-      let bailOutType: BailOutType = 'hospital';
-      if (el.tags?.railway === 'station') bailOutType = 'train_station';
-
-      const label = bailOutType === 'train_station' ? 'Train station'
-        : bailOutType === 'hospital' ? 'Hospital'
-        : 'Bus stop';
-
-      results.push({
-        id: el.id,
-        lat,
-        lng: lon,
-        name: el.tags?.name || label,
-        bailOutType,
-        phone: el.tags?.phone || el.tags?.['contact:phone'],
-      });
-    } catch {
-      // Skip malformed element
-      continue;
-    }
-  }
-  return results;
+  return classified;
 }

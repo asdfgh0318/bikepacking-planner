@@ -14,6 +14,18 @@ export const SUPPLY_COLORS: Record<string, { bg: string; border: string }> = {
   train_station: { bg: '#fca5a5', border: '#dc2626' },
   bus_stop: { bg: '#fed7aa', border: '#ea580c' },
   hospital: { bg: '#fecaca', border: '#dc2626' },
+  supermarket: { bg: '#34d399', border: '#065f46' },
+  convenience: { bg: '#6ee7b7', border: '#047857' },
+  fuel: { bg: '#fb923c', border: '#9a3412' },
+  bakery: { bg: '#fbbf24', border: '#78350f' },
+  cafe: { bg: '#a78bfa', border: '#4c1d95' },
+  restaurant: { bg: '#f472b6', border: '#831843' },
+  pharmacy: { bg: '#2dd4bf', border: '#134e4a' },
+  toilets: { bg: '#94a3b8', border: '#334155' },
+  compressed_air: { bg: '#67e8f9', border: '#164e63' },
+  halt: { bg: '#fca5a5', border: '#dc2626' },
+  alpine_hut: { bg: '#e879f9', border: '#701a75' },
+  basic_shelter: { bg: '#d8b4fe', border: '#6b21a8' },
 };
 
 export const SUPPLY_ICONS: Record<string, string> = {
@@ -27,6 +39,18 @@ export const SUPPLY_ICONS: Record<string, string> = {
   train_station: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#dc2626" stroke-width="2.5"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M4 11h16"/><path d="M12 3v8"/><circle cx="8" cy="20" r="1"/><circle cx="16" cy="20" r="1"/></svg>`,
   bus_stop: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#ea580c" stroke-width="2.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18"/><circle cx="7" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>`,
   hospital: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#dc2626" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>`,
+  supermarket: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#065f46" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+  convenience: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#047857" stroke-width="2.5"><path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path d="M3 9l2.45-4.9A2 2 0 017.24 3h9.52a2 2 0 011.8 1.1L21 9"/><line x1="12" y1="13" x2="12" y2="17"/></svg>`,
+  fuel: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#9a3412" stroke-width="2.5"><path d="M3 22V5a2 2 0 012-2h8a2 2 0 012 2v17"/><path d="M15 10h2a2 2 0 012 2v3a2 2 0 002 2"/><path d="M3 22h12"/><rect x="6" y="6" width="6" height="5" rx="1"/></svg>`,
+  bakery: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#78350f" stroke-width="2.5"><path d="M12 6c-3.5 0-7 2-7 6 0 3 2 5 3 6h8c1-1 3-3 3-6 0-4-3.5-6-7-6z"/><path d="M10 6V4a2 2 0 014 0v2"/><line x1="8" y1="18" x2="8" y2="21"/><line x1="16" y1="18" x2="16" y2="21"/></svg>`,
+  cafe: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#4c1d95" stroke-width="2.5"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>`,
+  restaurant: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#831843" stroke-width="2.5"><path d="M18 2v6a4 4 0 01-4 4H6"/><line x1="6" y1="2" x2="6" y2="22"/><path d="M18 12v10"/><path d="M2 2v4a4 4 0 004 4"/></svg>`,
+  pharmacy: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#134e4a" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>`,
+  toilets: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#334155" stroke-width="2.5"><circle cx="8" cy="4" r="2"/><circle cx="16" cy="4" r="2"/><path d="M8 8v4l-2 6"/><path d="M8 12l2 6"/><path d="M16 8v4l-2 6"/><path d="M16 12l2 6"/></svg>`,
+  compressed_air: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#164e63" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/><path d="M12 8v8"/><circle cx="12" cy="12" r="3"/></svg>`,
+  halt: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#dc2626" stroke-width="2.5"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="20" r="1"/><circle cx="16" cy="20" r="1"/></svg>`,
+  alpine_hut: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#701a75" stroke-width="2.5"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><rect x="9" y="13" width="6" height="8"/><path d="M9 9h6"/></svg>`,
+  basic_shelter: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#6b21a8" stroke-width="2.5"><path d="M3 21h18"/><path d="M12 3L3 14h18L12 3z"/><line x1="12" y1="14" x2="12" y2="21"/></svg>`,
 };
 
 export const SUPPLY_TYPE_LABELS: Record<string, string> = {
@@ -40,6 +64,18 @@ export const SUPPLY_TYPE_LABELS: Record<string, string> = {
   train_station: 'Train Station',
   bus_stop: 'Bus Stop',
   hospital: 'Hospital',
+  supermarket: 'Supermarket',
+  convenience: 'Convenience Store',
+  fuel: 'Fuel Station',
+  bakery: 'Bakery',
+  cafe: 'Cafe',
+  restaurant: 'Restaurant',
+  pharmacy: 'Pharmacy',
+  toilets: 'Public Toilet',
+  compressed_air: 'Compressed Air',
+  halt: 'Train Halt',
+  alpine_hut: 'Alpine Hut',
+  basic_shelter: 'Basic Shelter',
 };
 
 /** Single-character badge letters used in SupplyPanel and ShoppingTimeline */
@@ -54,4 +90,16 @@ export const SUPPLY_BADGE_LETTERS: Record<string, string> = {
   train_station: 'T',
   bus_stop: 'X',
   hospital: 'H',
+  supermarket: 'M',
+  convenience: 'C',
+  fuel: 'F',
+  bakery: 'K',
+  cafe: 'E',
+  restaurant: 'R',
+  pharmacy: '+',
+  toilets: 'T',
+  compressed_air: 'A',
+  halt: 'H',
+  alpine_hut: 'U',
+  basic_shelter: 'L',
 };

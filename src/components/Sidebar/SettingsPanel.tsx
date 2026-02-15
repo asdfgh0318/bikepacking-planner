@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from 'react';
+import { toast } from 'sonner';
 import { useSupplyStore } from '../../store/supplyStore';
 import { useResupplyStore, SEASON_DEFAULTS } from '../../store/resupplyStore';
 import { Toggle, RangeSlider } from '../ui';
@@ -45,6 +46,16 @@ export function SettingsPanel() {
   const setShowRepair = useSupplyStore((s) => s.setShowRepair);
   const showBailOut = useSupplyStore((s) => s.showBailOut);
   const setShowBailOut = useSupplyStore((s) => s.setShowBailOut);
+  const showFuel = useSupplyStore((s) => s.showFuel);
+  const setShowFuel = useSupplyStore((s) => s.setShowFuel);
+  const showFood = useSupplyStore((s) => s.showFood);
+  const setShowFood = useSupplyStore((s) => s.setShowFood);
+  const showPharmacy = useSupplyStore((s) => s.showPharmacy);
+  const setShowPharmacy = useSupplyStore((s) => s.setShowPharmacy);
+  const showToilets = useSupplyStore((s) => s.showToilets);
+  const setShowToilets = useSupplyStore((s) => s.setShowToilets);
+  const showHalts = useSupplyStore((s) => s.showHalts);
+  const setShowHalts = useSupplyStore((s) => s.setShowHalts);
 
   const entries = debugLog.getEntries();
   const summary = debugLog.summary();
@@ -115,6 +126,11 @@ export function SettingsPanel() {
         <Toggle checked={showCampsites} onChange={setShowCampsites} label="Campsites & Shelters" color="#c084fc" />
         <Toggle checked={showRepair} onChange={setShowRepair} label="Bike Repair Shops" color="#facc15" />
         <Toggle checked={showBailOut} onChange={setShowBailOut} label="Bail-out Points (trains, buses, hospitals)" color="#f87171" />
+        <Toggle checked={showFuel} onChange={setShowFuel} label="Fuel Stations" color="#fb923c" />
+        <Toggle checked={showFood} onChange={setShowFood} label="Bakeries, Cafes, Restaurants" color="#a78bfa" />
+        <Toggle checked={showPharmacy} onChange={setShowPharmacy} label="Pharmacies" color="#2dd4bf" />
+        <Toggle checked={showToilets} onChange={setShowToilets} label="Public Toilets" color="#94a3b8" />
+        <Toggle checked={showHalts} onChange={setShowHalts} label="Train Halts" color="#fca5a5" />
         <Toggle checked={showWeatherMarkers} onChange={setShowWeatherMarkers} label="Weather on Map" color="#60a5fa" />
       </div>
 
@@ -129,6 +145,20 @@ export function SettingsPanel() {
       >
         Restart Setup Wizard
       </button>
+
+      <div className="section-label">Cache</div>
+      <div className="setting-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>POI cache (SQLite)</span>
+          <button className="btn btn-sm" onClick={async () => {
+            const { clearCache } = await import('../../services/poiCache');
+            await clearCache();
+            toast.success('POI cache cleared');
+          }}>
+            Clear Cache
+          </button>
+        </div>
+      </div>
 
       <div className="section-label">Debug Log <span className="debug-live-dot" /></div>
       <div className="debug-panel">
