@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { PaczkomatConfig, ResupplyStrategy, ResupplyStrategyId, UnifiedShoppingPlan, TripContext, Season, RouteWeather } from '../types';
+import type { WaterPlan } from '../services/waterPlanner';
 import { RESUPPLY_PRESETS } from '../services/resupplyPlanner';
 
 // Season defaults (Poland, ~52°N latitude)
@@ -25,6 +26,8 @@ interface ResupplyState {
   unifiedPlan: UnifiedShoppingPlan | null;
   isPlanning: boolean;
   activeView: 'timeline' | 'checklist' | 'shopping' | 'weight';
+  waterCapacityL: number;
+  waterPlan: WaterPlan | null;
 
   setEnablePaczkomatShipping: (v: boolean) => void;
   setPaczkomatConfig: <K extends keyof PaczkomatConfig>(key: K, value: PaczkomatConfig[K]) => void;
@@ -42,6 +45,8 @@ interface ResupplyState {
   setUnifiedPlan: (plan: UnifiedShoppingPlan | null) => void;
   setIsPlanning: (v: boolean) => void;
   setActiveView: (v: ResupplyState['activeView']) => void;
+  setWaterCapacityL: (v: number) => void;
+  setWaterPlan: (p: WaterPlan | null) => void;
 }
 
 export const useResupplyStore = create<ResupplyState>((set) => ({
@@ -58,8 +63,8 @@ export const useResupplyStore = create<ResupplyState>((set) => ({
     avgSpeedKmh: 15,
     tripStartDate: new Date().toISOString().split('T')[0],
   },
-  strategyId: 'daily-ration',
-  strategy: { ...RESUPPLY_PRESETS['daily-ration'] },
+  strategyId: 'auto',
+  strategy: { ...RESUPPLY_PRESETS['auto'] },
   tripContext: { season: 'summer', ...SEASON_DEFAULTS.summer },
   routeWeather: null,
   isLoadingWeather: false,
@@ -67,6 +72,8 @@ export const useResupplyStore = create<ResupplyState>((set) => ({
   unifiedPlan: null,
   isPlanning: false,
   activeView: 'timeline',
+  waterCapacityL: 2.0,
+  waterPlan: null,
 
   setEnablePaczkomatShipping: (v) => set({ enablePaczkomatShipping: v }),
   setPaczkomatConfig: (key, value) =>
@@ -95,4 +102,6 @@ export const useResupplyStore = create<ResupplyState>((set) => ({
   setUnifiedPlan: (plan) => set({ unifiedPlan: plan }),
   setIsPlanning: (v) => set({ isPlanning: v }),
   setActiveView: (v) => set({ activeView: v }),
+  setWaterCapacityL: (v) => set({ waterCapacityL: Math.max(0.5, Math.min(5.0, v)) }),
+  setWaterPlan: (p) => set({ waterPlan: p }),
 }));

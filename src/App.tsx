@@ -3,6 +3,7 @@ import { Toaster } from 'sonner';
 import { MapView } from './components/Map/MapView';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { ElevationProfile } from './components/ElevationProfile';
+import { Wizard } from './components/Wizard';
 import { useRouteStore } from './store/routeStore';
 import { decodeRouteFromHash } from './services/routeStorage';
 import { useRouteCalculation } from './hooks/useRouteCalculation';
@@ -56,6 +57,7 @@ function App() {
           },
         }}
       />
+      <Wizard />
       <Sidebar />
       <div className="main-area">
         <main className="map-container">

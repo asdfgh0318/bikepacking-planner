@@ -1,8 +1,10 @@
-import { Grid3X3, AlertTriangle, Droplets } from 'lucide-react';
+import { Grid3X3, AlertTriangle, Droplets, GlassWater, Lightbulb, MapPin } from 'lucide-react';
 import { useSupplyStore } from '../../store/supplyStore';
-import { EmptyState } from '../ui';
+import { useResupplyStore } from '../../store/resupplyStore';
+import { useRouteStore } from '../../store/routeStore';
+import { EmptyState, RangeSlider } from '../ui';
 import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
-import type { GapSeverity } from '../../types';
+import type { GapSeverity, SupplyGap } from '../../types';
 
 const GAP_COLORS: Record<GapSeverity, { bg: string; text: string; label: string }> = {
   safe: { bg: 'rgba(74, 222, 128, 0.1)', text: '#4ade80', label: 'Safe' },
@@ -10,11 +12,60 @@ const GAP_COLORS: Record<GapSeverity, { bg: string; text: string; label: string 
   danger: { bg: 'rgba(248, 113, 113, 0.1)', text: '#f87171', label: 'Danger' },
 };
 
+function GapSuggestions({ gap }: { gap: SupplyGap }) {
+  const hasStockUp = !!gap.stockUpAt;
+  const hasNext = !!gap.nextResupply;
+  const hasAlternatives = gap.alternatives && gap.alternatives.length > 0;
+
+  if (!hasStockUp && !hasNext && !hasAlternatives) return null;
+
+  return (
+    <div className="gap-suggestions">
+      {hasStockUp && (
+        <div className="gap-suggestion">
+          <Lightbulb size={11} className="gap-suggestion-icon" />
+          <span>
+            Stock up at <strong>{gap.stockUpAt!.name}</strong> at km {gap.stockUpAt!.km} before this gap
+          </span>
+        </div>
+      )}
+      {hasStockUp && hasNext && (
+        <div className="gap-suggestion">
+          <MapPin size={11} className="gap-suggestion-icon" />
+          <span>
+            Next food: <strong>{gap.nextResupply!.name}</strong> at km {gap.nextResupply!.km} ({gap.distanceKm.toFixed(0)} km away)
+          </span>
+        </div>
+      )}
+      {!hasStockUp && hasNext && (
+        <div className="gap-suggestion">
+          <MapPin size={11} className="gap-suggestion-icon" />
+          <span>
+            First food: <strong>{gap.nextResupply!.name}</strong> at km {gap.nextResupply!.km}
+          </span>
+        </div>
+      )}
+      {hasAlternatives && gap.alternatives!.map((alt, j) => (
+        <div key={j} className="gap-suggestion gap-suggestion-alt">
+          <MapPin size={11} className="gap-suggestion-icon" />
+          <span>
+            Nearest off-route: <strong>{alt.name}</strong> — {alt.detourKm} km detour at km {alt.routeKm}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SupplyPanel() {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
   const supplyGaps = useSupplyStore((s) => s.supplyGaps);
   const waterGaps = useSupplyStore((s) => s.waterGaps);
   const isLoading = useSupplyStore((s) => s.isLoading);
+  const waterCapacityL = useResupplyStore((s) => s.waterCapacityL);
+  const setWaterCapacityL = useResupplyStore((s) => s.setWaterCapacityL);
+  const waterPlan = useResupplyStore((s) => s.waterPlan);
+  const daySegments = useRouteStore((s) => s.daySegments);
 
   if (isLoading) {
     return (
@@ -84,21 +135,23 @@ export function SupplyPanel() {
             .map((gap, i) => {
               const colors = GAP_COLORS[gap.severity];
               return (
-                <div
-                  key={i}
-                  className="supply-gap-item"
-                  style={{ background: colors.bg, borderColor: colors.text }}
-                  aria-label={`${colors.label}: ${gap.distanceKm.toFixed(0)} km gap from ${gap.fromName} to ${gap.toName}`}
-                >
-                  <div className="supply-gap-distance" style={{ color: colors.text }}>
-                    {gap.distanceKm.toFixed(0)} km
+                <div key={i} className="supply-gap-card">
+                  <div
+                    className="supply-gap-item"
+                    style={{ background: colors.bg, borderColor: colors.text }}
+                    aria-label={`${colors.label}: ${gap.distanceKm.toFixed(0)} km gap from ${gap.fromName} to ${gap.toName}`}
+                  >
+                    <div className="supply-gap-distance" style={{ color: colors.text }}>
+                      {gap.distanceKm.toFixed(0)} km
+                    </div>
+                    <div className="supply-gap-names">
+                      {gap.fromName} → {gap.toName}
+                    </div>
+                    <span className="supply-gap-severity" style={{ color: colors.text }} aria-label={`Severity: ${colors.label}`}>
+                      {colors.label}
+                    </span>
                   </div>
-                  <div className="supply-gap-names">
-                    {gap.fromName} → {gap.toName}
-                  </div>
-                  <span className="supply-gap-severity" style={{ color: colors.text }} aria-label={`Severity: ${colors.label}`}>
-                    {colors.label}
-                  </span>
+                  <GapSuggestions gap={gap} />
                 </div>
               );
             })}
@@ -137,6 +190,73 @@ export function SupplyPanel() {
             })}
         </div>
       )}
+
+      {/* Water Planning */}
+      <div className="supply-gaps water-planning">
+        <div className="supply-gaps-header">
+          <GlassWater size={14} />
+          <span>Water Planning</span>
+        </div>
+
+        <RangeSlider
+          label="Water Capacity"
+          value={waterCapacityL}
+          onChange={setWaterCapacityL}
+          min={0.5}
+          max={5.0}
+          step={0.5}
+          unit="L"
+          minLabel="0.5 L"
+          maxLabel="5.0 L"
+        />
+
+        {waterPlan && daySegments.length > 0 && (
+          <>
+            <div className="water-plan-stats">
+              <div className="water-plan-stat">
+                Total consumption: {waterPlan.totalConsumptionL} L over {daySegments.length} day{daySegments.length !== 1 ? 's' : ''}
+              </div>
+              <div className="water-plan-stat">
+                Refill stops: {waterPlan.refillCount}
+              </div>
+            </div>
+
+            {waterPlan.criticalPoints.length > 0 && (
+              <div className="water-critical-list">
+                {waterPlan.criticalPoints.map((cp, i) => (
+                  <div
+                    key={i}
+                    className="supply-gap-item"
+                    style={{ background: 'rgba(248, 113, 113, 0.1)', borderColor: '#f87171' }}
+                    aria-label={`Low water warning at km ${cp.km}`}
+                  >
+                    <div className="supply-gap-distance" style={{ color: '#f87171' }}>
+                      km {cp.km}
+                    </div>
+                    <div className="supply-gap-names">
+                      Low water at km {cp.km} (day {cp.dayNumber}) — nearest source: {cp.nearestSourceName} at km {cp.nearestSourceKm.toFixed(0)}
+                    </div>
+                    <span className="supply-gap-severity" style={{ color: '#f87171' }}>
+                      {cp.liters.toFixed(2)} L
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {waterPlan.recommendations.length > 0 && (
+              <div className="water-recommendations">
+                <div className="water-recommendations-header">Recommendations</div>
+                <ul className="water-recommendations-list">
+                  {waterPlan.recommendations.map((rec, i) => (
+                    <li key={i} className="water-recommendation-item">{rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* List */}
       <ul className="supply-list">

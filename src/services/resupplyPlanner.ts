@@ -22,7 +22,36 @@ import {
   HEAVY_LOAD_WARNING_G,
 } from '../config';
 
+/**
+ * Auto-detect the best resupply strategy based on shop density along the route.
+ * Filters supply points to food-relevant types and computes shops-per-km density.
+ */
+export function autoDetectStrategy(
+  supplyPoints: SupplyPoint[],
+  totalDistanceKm: number,
+): { strategyId: ResupplyStrategyId; reason: string } {
+  const foodShops = supplyPoints.filter(p =>
+    ['zabka', 'biedronka', 'shop', 'paczkomat'].includes(p.type)
+  );
+  const density = totalDistanceKm > 0 ? foodShops.length / totalDistanceKm : 0;
+
+  if (density > 0.5) return { strategyId: 'grazer', reason: `${foodShops.length} shops (very dense)` };
+  if (density > 0.2) return { strategyId: 'daily-ration', reason: `${foodShops.length} shops (normal density)` };
+  if (density > 0.05) return { strategyId: 'self-sufficient', reason: `${foodShops.length} shops (sparse)` };
+  return { strategyId: 'self-sufficient', reason: `${foodShops.length} shops (very sparse)` };
+}
+
 export const RESUPPLY_PRESETS: Record<ResupplyStrategyId, ResupplyStrategy> = {
+  auto: {
+    id: 'auto',
+    label: 'Auto',
+    description: 'Automatically picks the best strategy based on shop density along your route',
+    maxStopsPerDay: 1,
+    preferEarlyStop: true,
+    carryBufferDays: 0,
+    minCalorieReserve: 0,
+    preferStoreType: ['biedronka', 'zabka', 'shop', 'paczkomat'],
+  },
   'daily-ration': {
     id: 'daily-ration',
     label: 'Daily Ration',

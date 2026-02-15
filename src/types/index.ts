@@ -82,6 +82,15 @@ export interface SupplyPoint {
 // Supply gap analysis
 export type GapSeverity = 'safe' | 'caution' | 'danger';
 
+export interface GapAlternative {
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  detourKm: number; // round-trip detour distance
+  routeKm: number;  // where on route the detour starts
+}
+
 export interface SupplyGap {
   startKm: number;
   endKm: number;
@@ -89,6 +98,9 @@ export interface SupplyGap {
   severity: GapSeverity;
   fromName: string;
   toName: string;
+  alternatives?: GapAlternative[];
+  stockUpAt?: { name: string; km: number };
+  nextResupply?: { name: string; km: number };
 }
 
 // Night stop suggestion
@@ -145,7 +157,7 @@ export interface RouteWeather {
 }
 
 // Resupply Strategy
-export type ResupplyStrategyId = 'daily-ration' | 'grazer' | 'ultralight' | 'self-sufficient' | 'custom';
+export type ResupplyStrategyId = 'auto' | 'daily-ration' | 'grazer' | 'ultralight' | 'self-sufficient' | 'custom';
 
 export interface ResupplyStrategy {
   id: ResupplyStrategyId;
@@ -251,3 +263,6 @@ export interface UnifiedShoppingPlan {
   shipping: ShippingPlan | null;
   dayBreakdown: DayShoppingBreakdown[];
 }
+
+// Water consumption planning (re-exported from waterPlanner service)
+export type { WaterPlan, WaterLevelPoint, WaterCriticalPoint } from '../services/waterPlanner';

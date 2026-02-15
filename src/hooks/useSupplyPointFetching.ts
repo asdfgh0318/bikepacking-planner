@@ -5,7 +5,7 @@ import { useSupplyStore } from '../store/supplyStore';
 import { fetchPaczkomaty } from '../services/inpost';
 import { fetchShopsNearBbox, fetchWaterSourcesNearBbox, fetchCampsitesNearBbox, fetchRepairShopsNearBbox } from '../services/overpass';
 import { splitRouteIntoDays } from '../services/daySplitter';
-import { analyzeSupplyGaps, analyzeWaterGaps } from '../services/gapAnalysis';
+import { analyzeSupplyGaps, analyzeWaterGaps, enrichGapsWithSuggestions } from '../services/gapAnalysis';
 import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from '../utils/geo';
 import { debugLog } from '../utils/debugLogger';
 import type { SupplyPoint } from '../types';
@@ -223,13 +223,15 @@ export function useSupplyPointFetching(): void {
           // Analyze supply gaps
           const routeStats = useRouteStore.getState().routeStats;
           const totalDistKm = routeStats?.distanceKm ?? 0;
-          const gaps = analyzeSupplyGaps(supplyPoints, totalDistKm);
+          const rawGaps = analyzeSupplyGaps(supplyPoints, totalDistKm);
+          const gaps = enrichGapsWithSuggestions(rawGaps, supplyPoints, corridorWidthKm);
           setSupplyGaps(gaps);
           const wGaps = analyzeWaterGaps(supplyPoints, totalDistKm);
           setWaterGaps(wGaps);
           debugLog.info('supply', 'gaps:analyzed', {
             foodGaps: gaps.length, foodDangers: gaps.filter(g => g.severity === 'danger').length,
             waterGaps: wGaps.length, waterDangers: wGaps.filter(g => g.severity === 'danger').length,
+            gapsWithAlternatives: gaps.filter(g => g.alternatives && g.alternatives.length > 0).length,
           });
 
           // Auto-calculate day segments

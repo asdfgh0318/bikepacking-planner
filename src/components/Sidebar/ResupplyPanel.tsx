@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ShoppingCart, Zap, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
@@ -5,7 +6,7 @@ import { useSupplyStore } from '../../store/supplyStore';
 import { useDietStore } from '../../store/dietStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { DIET_PROFILES } from '../../services/diet';
-import { RESUPPLY_PRESETS } from '../../services/resupplyPlanner';
+import { RESUPPLY_PRESETS, autoDetectStrategy } from '../../services/resupplyPlanner';
 import type { ResupplyStrategyId } from '../../types';
 import { generateUnifiedPlan } from '../../services/unifiedPlan';
 import { debugLog } from '../../utils/debugLogger';
@@ -16,7 +17,8 @@ import { PreTripChecklist } from './PreTripChecklist';
 import { OnRouteShoppingLists } from './OnRouteShoppingLists';
 import { CarryWeightGraph } from './CarryWeightGraph';
 
-const STRATEGY_OPTIONS: { id: ResupplyStrategyId; emoji: string }[] = [
+const STRATEGY_OPTIONS: { id: ResupplyStrategyId; emoji: string; labelOverride?: string }[] = [
+  { id: 'auto', emoji: '🤖', labelOverride: 'Auto (Recommended)' },
   { id: 'daily-ration', emoji: '📦' },
   { id: 'grazer', emoji: '🍪' },
   { id: 'ultralight', emoji: '🪶' },
@@ -56,6 +58,17 @@ export function ResupplyPanel() {
   const routeWeather = useResupplyStore((s) => s.routeWeather);
   const isLoadingWeather = useResupplyStore((s) => s.isLoadingWeather);
 
+  const routeStats = useRouteStore((s) => s.routeStats);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Auto-detect strategy based on shop density
+  const autoResult = strategyId === 'auto' && routeStats
+    ? autoDetectStrategy(supplyPoints, routeStats.distanceKm)
+    : null;
+  const resolvedStrategyId = autoResult ? autoResult.strategyId : strategyId;
+  const resolvedStrategy = autoResult ? RESUPPLY_PRESETS[autoResult.strategyId] : strategy;
+
   if (daySegments.length === 0) {
     return (
       <div className="panel">
@@ -89,7 +102,7 @@ export function ResupplyPanel() {
         supplyPoints,
         supplyGaps,
         enablePaczkomat ? paczkomatConfig : null,
-        { ...resupplyConfig, strategy, tripStartDate: resupplyConfig.tripStartDate, tripContext }
+        { ...resupplyConfig, strategy: resolvedStrategy, tripStartDate: resupplyConfig.tripStartDate, tripContext }
       );
       setUnifiedPlan(plan);
       debugLog.info('resupply', 'generate:success', {
@@ -120,7 +133,7 @@ export function ResupplyPanel() {
       <div className="strategy-presets">
         <div className="strategy-label">Resupply Strategy</div>
         <div className="strategy-grid">
-          {STRATEGY_OPTIONS.map(({ id, emoji }) => {
+          {STRATEGY_OPTIONS.map(({ id, emoji, labelOverride }) => {
             const preset = RESUPPLY_PRESETS[id];
             return (
               <button
@@ -130,12 +143,16 @@ export function ResupplyPanel() {
                 title={preset.description}
               >
                 <span className="strategy-emoji">{emoji}</span>
-                <span className="strategy-name">{preset.label}</span>
+                <span className="strategy-name">{labelOverride ?? preset.label}</span>
               </button>
             );
           })}
         </div>
-        <div className="strategy-desc">{strategy.description}</div>
+        <div className="strategy-desc">
+          {strategyId === 'auto' && autoResult
+            ? `Auto \u2014 ${RESUPPLY_PRESETS[autoResult.strategyId].label} (${autoResult.reason})`
+            : strategy.description}
+        </div>
       </div>
 
       {/* Custom strategy params */}
@@ -206,31 +223,44 @@ export function ResupplyPanel() {
           unit="km/h"
         />
 
-        <Toggle
-          checked={enablePaczkomat}
-          onChange={setEnablePaczkomat}
-          label="Paczkomat pre-shipping"
-          color="#fbbf24"
-        />
+        <button
+          className="advanced-toggle"
+          onClick={() => setShowAdvanced((v) => !v)}
+          type="button"
+        >
+          <span>{showAdvanced ? '\u25BE' : '\u25B8'}</span>
+          Advanced: Pre-Ship Packages
+        </button>
 
-        {enablePaczkomat && (
-          <div className="paczkomat-config">
-            <RangeSlider
-              label="Ship every"
-              value={paczkomatConfig.intervalDays}
-              onChange={(v) => setPaczkomatConfig('intervalDays', v)}
-              min={1}
-              max={5}
-              step={1}
-              unit="days"
-            />
+        {showAdvanced && (
+          <>
             <Toggle
-              checked={paczkomatConfig.prefer24h}
-              onChange={(v) => setPaczkomatConfig('prefer24h', v)}
-              label="Prefer 24/7 lockers"
+              checked={enablePaczkomat}
+              onChange={setEnablePaczkomat}
+              label="Paczkomat pre-shipping"
               color="#fbbf24"
             />
-          </div>
+
+            {enablePaczkomat && (
+              <div className="paczkomat-config">
+                <RangeSlider
+                  label="Ship every"
+                  value={paczkomatConfig.intervalDays}
+                  onChange={(v) => setPaczkomatConfig('intervalDays', v)}
+                  min={1}
+                  max={5}
+                  step={1}
+                  unit="days"
+                />
+                <Toggle
+                  checked={paczkomatConfig.prefer24h}
+                  onChange={(v) => setPaczkomatConfig('prefer24h', v)}
+                  label="Prefer 24/7 lockers"
+                  color="#fbbf24"
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 

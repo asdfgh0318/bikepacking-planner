@@ -1,9 +1,7 @@
 import React from 'react';
-import { AlertTriangle, Wrench, CloudRain, Wind, Thermometer } from 'lucide-react';
+import { AlertTriangle, CloudRain, Wind, Thermometer } from 'lucide-react';
 import type { UnifiedShoppingPlan } from '../../types';
-import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
-import { generateMaintenanceReminders } from '../../services/maintenance';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
 import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS } from '../../constants/supplyTypes';
 
@@ -29,9 +27,7 @@ function arrivalTimeClass(decimalHour: number): string {
 }
 
 export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
-  const daySegments = useRouteStore((s) => s.daySegments);
   const routeWeather = useResupplyStore((s) => s.routeWeather);
-  const reminders = generateMaintenanceReminders(daySegments);
   const weatherWarnings = routeWeather ? getWeatherWarnings(routeWeather.days) : [];
 
   return (
@@ -100,16 +96,6 @@ export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: {
               </div>
             </div>
           ))}
-
-          {/* Maintenance reminders for this day */}
-          {reminders
-            .filter((r) => r.dayNumber === day.dayNumber)
-            .map((r, i) => (
-              <div key={`maint-${i}`} className="timeline-maintenance">
-                <Wrench size={12} />
-                <span>{r.label} (km {r.distanceKm})</span>
-              </div>
-            ))}
 
           <div className="timeline-day-footer">
             {(() => {
