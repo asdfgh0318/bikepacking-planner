@@ -18,6 +18,8 @@ export function useRouteCalculation(): void {
   const setRouteStats = useRouteStore((s) => s.setRouteStats);
   const setIsCalculating = useRouteStore((s) => s.setIsCalculating);
   const setSupplyPoints = useSupplyStore((s) => s.setSupplyPoints);
+  const gpxGeometryLoaded = useRouteStore((s) => s.gpxGeometryLoaded);
+  const setGpxGeometryLoaded = useRouteStore((s) => s.setGpxGeometryLoaded);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -27,6 +29,13 @@ export function useRouteCalculation(): void {
       setRouteGeometry(null);
       setRouteStats(null);
       setSupplyPoints([]);
+      return;
+    }
+
+    // Skip BRouter recalculation when GPX already provided full geometry
+    if (gpxGeometryLoaded) {
+      debugLog.info('route', 'calc:skip', 'GPX geometry already loaded, skipping BRouter');
+      setGpxGeometryLoaded(false);
       return;
     }
 
@@ -62,5 +71,5 @@ export function useRouteCalculation(): void {
       clearTimeout(debounceRef.current);
       controller.abort();
     };
-  }, [waypoints, routingProfile, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
+  }, [waypoints, routingProfile, gpxGeometryLoaded, setGpxGeometryLoaded, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
 }

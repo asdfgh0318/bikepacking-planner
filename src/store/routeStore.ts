@@ -9,6 +9,8 @@ interface RouteState {
   daySegments: DaySegment[];
   dailyTargetKm: number;
   routingProfile: RoutingProfile;
+  /** When true, the current geometry came from a GPX import and should not be overwritten by BRouter. */
+  gpxGeometryLoaded: boolean;
 
   addWaypoint: (lat: number, lng: number) => void;
   updateWaypoint: (id: string, lat: number, lng: number) => void;
@@ -21,6 +23,7 @@ interface RouteState {
   setDaySegments: (segs: DaySegment[]) => void;
   setDailyTargetKm: (km: number) => void;
   setRoutingProfile: (p: RoutingProfile) => void;
+  setGpxGeometryLoaded: (v: boolean) => void;
 }
 
 let nextId = 1;
@@ -33,6 +36,7 @@ export const useRouteStore = create<RouteState>((set) => ({
   daySegments: [],
   dailyTargetKm: 80,
   routingProfile: 'trekking',
+  gpxGeometryLoaded: false,
 
   addWaypoint: (lat, lng) =>
     set((s) => ({
@@ -50,7 +54,7 @@ export const useRouteStore = create<RouteState>((set) => ({
     })),
 
   clearRoute: () =>
-    set({ waypoints: [], routeGeometry: null, routeStats: null, daySegments: [] }),
+    set({ waypoints: [], routeGeometry: null, routeStats: null, daySegments: [], gpxGeometryLoaded: false }),
 
   setRouteGeometry: (geom) => set({ routeGeometry: geom }),
   setRouteStats: (stats) => set({ routeStats: stats }),
@@ -59,4 +63,5 @@ export const useRouteStore = create<RouteState>((set) => ({
   setDaySegments: (segs) => set({ daySegments: segs }),
   setDailyTargetKm: (km) => set({ dailyTargetKm: Math.max(20, Math.min(300, km)) }),
   setRoutingProfile: (p) => set({ routingProfile: p }),
+  setGpxGeometryLoaded: (v) => set({ gpxGeometryLoaded: v }),
 }));

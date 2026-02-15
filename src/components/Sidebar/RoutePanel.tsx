@@ -30,6 +30,7 @@ export function RoutePanel() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
   const setRouteGeometry = useRouteStore((s) => s.setRouteGeometry);
   const setRouteStats = useRouteStore((s) => s.setRouteStats);
+  const setGpxGeometryLoaded = useRouteStore((s) => s.setGpxGeometryLoaded);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,6 +49,7 @@ export function RoutePanel() {
         setWaypoints(parsed);
       }
       if (geometry) {
+        setGpxGeometryLoaded(true);
         setRouteGeometry(geometry);
         // Compute basic stats from the geometry coordinates
         const coords = geometry.coordinates;

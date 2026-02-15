@@ -9,7 +9,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
   },
   optimizeDeps: {
-    exclude: ['sql.js'],
+    include: ['sql.js'],
   },
   plugins: [
     react(),

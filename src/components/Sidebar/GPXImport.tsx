@@ -9,6 +9,7 @@ export function GPXImport() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
   const setRouteGeometry = useRouteStore((s) => s.setRouteGeometry);
   const setRouteStats = useRouteStore((s) => s.setRouteStats);
+  const setGpxGeometryLoaded = useRouteStore((s) => s.setGpxGeometryLoaded);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -22,6 +23,7 @@ export function GPXImport() {
           setWaypoints(waypoints);
         }
         if (geometry) {
+          setGpxGeometryLoaded(true);
           setRouteGeometry(geometry);
           const coords = geometry.coordinates;
           let dist = 0;
@@ -44,7 +46,7 @@ export function GPXImport() {
         toast.error('Failed to parse GPX file', { description: 'Check the file format and try again' });
       }
     },
-    [setWaypoints, setRouteGeometry, setRouteStats]
+    [setWaypoints, setRouteGeometry, setRouteStats, setGpxGeometryLoaded]
   );
 
   return (
