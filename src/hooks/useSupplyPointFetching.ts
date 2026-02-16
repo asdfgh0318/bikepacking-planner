@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
@@ -16,6 +16,12 @@ import type { SupplyPoint } from '../types';
  * handles caching, classification, and distance calculation. InPost results
  * are still fetched via bbox and corridor-filtered here. After merging, runs
  * gap analysis and day splitting.
+ *
+ * Note: The Overpass fetch does NOT use the abort signal because the SQLite
+ * cache check takes ~1-2s. React StrictMode (or rapid route changes) can
+ * abort the controller during that window, causing the Overpass query to
+ * never fire. Instead, we rely on the `cancelled` flag to discard stale
+ * results, and only use the signal for the fast InPost API call.
  */
 export function useSupplyPointFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
@@ -28,6 +34,9 @@ export function useSupplyPointFetching(): void {
   const setWaterGaps = useSupplyStore((s) => s.setWaterGaps);
   const setIsLoading = useSupplyStore((s) => s.setIsLoading);
 
+  // Track the current fetch version to discard stale results
+  const versionRef = useRef(0);
+
   useEffect(() => {
     if (!routeGeometry) {
       setSupplyPoints([]);
@@ -35,16 +44,19 @@ export function useSupplyPointFetching(): void {
     }
 
     const controller = new AbortController();
-    let cancelled = false;
+    const version = ++versionRef.current;
 
     async function loadSupplyPoints() {
       setIsLoading(true);
-      debugLog.info('supply', 'fetch:start', { corridorWidthKm });
+      debugLog.info('supply', 'fetch:start', { corridorWidthKm, version });
       try {
         // Fire 2 parallel calls: Overpass (via cache manager) + InPost
+        // Overpass does NOT get the abort signal — its SQLite cache check is
+        // slow enough that the signal can be triggered by React lifecycle
+        // before the actual network request fires.
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
         const [overpassResult, paczkomatyRaw] = await Promise.allSettled([
-          getOrFetchSupplyPOIs(routeGeometry!, corridorWidthKm, controller.signal),
+          getOrFetchSupplyPOIs(routeGeometry!, corridorWidthKm),
           fetchPaczkomaty(bounds, controller.signal),
         ]);
 
@@ -57,7 +69,11 @@ export function useSupplyPointFetching(): void {
         if (overpassResult.status === 'rejected') debugLog.error('supply', 'fetch:overpass:fail', String(overpassResult.reason));
         if (paczkomatyRaw.status === 'rejected') debugLog.error('supply', 'fetch:paczkomaty:fail', String(paczkomatyRaw.reason));
 
-        if (cancelled) return;
+        // Discard stale results — a newer fetch has started
+        if (version !== versionRef.current) {
+          debugLog.debug('supply', 'fetch:stale', { version, current: versionRef.current });
+          return;
+        }
 
         const supplyPoints: SupplyPoint[] = [];
 
@@ -103,7 +119,7 @@ export function useSupplyPointFetching(): void {
 
         supplyPoints.sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
 
-        if (!cancelled) {
+        if (version === versionRef.current) {
           const byType: Record<string, number> = {};
           for (const sp of supplyPoints) byType[sp.type] = (byType[sp.type] || 0) + 1;
           debugLog.info('supply', 'points:loaded', { total: supplyPoints.length, ...byType });
@@ -137,13 +153,13 @@ export function useSupplyPointFetching(): void {
         debugLog.error('supply', 'fetch:error', err instanceof Error ? err.message : String(err));
         toast.error('Failed to load supply points', { description: 'Check your connection and try again' });
       } finally {
-        if (!cancelled) {
+        if (version === versionRef.current) {
           setIsLoading(false);
         }
       }
     }
 
     loadSupplyPoints();
-    return () => { cancelled = true; controller.abort(); };
+    return () => { controller.abort(); };
   }, [routeGeometry, corridorWidthKm, dailyTargetKm, setSupplyPoints, setIsLoading, setDaySegments, setSupplyGaps, setWaterGaps]);
 }

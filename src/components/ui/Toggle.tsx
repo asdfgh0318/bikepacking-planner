@@ -7,11 +7,12 @@ interface ToggleProps {
 
 export function Toggle({ checked, onChange, label, color }: ToggleProps) {
   return (
-    <label
+    <div
       className="toggle-row"
       role="switch"
       aria-checked={checked}
       tabIndex={0}
+      onClick={() => onChange(!checked)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -23,9 +24,9 @@ export function Toggle({ checked, onChange, label, color }: ToggleProps) {
         {color && <span className="toggle-dot" style={{ background: color }} />}
         <span>{label}</span>
       </div>
-      <div className={`toggle ${checked ? 'on' : ''}`} onClick={() => onChange(!checked)}>
+      <div className={`toggle ${checked ? 'on' : ''}`}>
         <div className="toggle-thumb" />
       </div>
-    </label>
+    </div>
   );
 }
