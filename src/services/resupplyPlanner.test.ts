@@ -6,7 +6,6 @@ import type {
   SupplyPoint,
   SupplyGap,
   DietProfile,
-  ResupplyStrategy,
 } from '../types';
 
 // ---------------------------------------------------------------------------

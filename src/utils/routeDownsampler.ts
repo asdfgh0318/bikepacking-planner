@@ -1,4 +1,4 @@
-import * as turf from '@turf/turf';
+import { lineString, length, along } from '@turf/turf';
 import { OVERPASS_ROUTE_SAMPLE_POINTS } from '../config';
 
 /**
@@ -16,8 +16,8 @@ export function downsampleRouteForOverpass(
     return coords.map(c => `${c[1].toFixed(5)},${c[0].toFixed(5)}`).join(',');
   }
 
-  const line = turf.lineString(coords);
-  const totalLengthKm = turf.length(line, { units: 'kilometers' });
+  const line = lineString(coords);
+  const totalLengthKm = length(line, { units: 'kilometers' });
 
   // Ensure at least 2 points, max targetCount
   const numPoints = Math.min(targetCount, Math.max(2, coords.length));
@@ -31,7 +31,7 @@ export function downsampleRouteForOverpass(
   // Sample intermediate points at equal distance intervals
   for (let i = 1; i < numPoints - 1; i++) {
     const distKm = i * stepKm;
-    const pt = turf.along(line, distKm, { units: 'kilometers' });
+    const pt = along(line, distKm, { units: 'kilometers' });
     const [lon, lat] = pt.geometry.coordinates;
     sampled.push([lat, lon]);
   }

@@ -1,52 +1,58 @@
+import { memo, useMemo } from 'react';
 import type { UnifiedShoppingPlan } from '../../types';
 
-export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
+// SVG dimensions (constant)
+const W = 1000;
+const H = 160;
+const PAD = { top: 10, bottom: 24, left: 44, right: 0 };
+const CHART_W = W - PAD.left - PAD.right;
+const CHART_H = H - PAD.top - PAD.bottom;
+
+export const CarryWeightGraph = memo(function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
   const curve = plan.resupply.carryWeightCurve;
   if (curve.length < 2) return null;
 
-  const totalDist = curve[curve.length - 1].distanceKm;
-  const rawMax = curve.length > 0 ? Math.max(...curve.map((p) => p.foodWeightG)) : 0;
-  // Round up to nearest 500g for a clean scale, minimum 3000g default when no meaningful data
-  const maxWeight = rawMax > 0 ? Math.ceil(rawMax / 500) * 500 : 3000;
+  const derived = useMemo(() => {
+    const totalDist = curve[curve.length - 1].distanceKm;
+    const rawMax = Math.max(...curve.map((p) => p.foodWeightG));
+    const maxWeight = rawMax > 0 ? Math.ceil(rawMax / 500) * 500 : 3000;
 
-  // SVG dimensions
-  const w = 1000;
-  const h = 160;
-  const pad = { top: 10, bottom: 24, left: 44, right: 0 };
-  const chartW = w - pad.left - pad.right;
-  const chartH = h - pad.top - pad.bottom;
+    const toX = (d: number) => PAD.left + (d / totalDist) * CHART_W;
+    const toY = (wt: number) => PAD.top + CHART_H - (wt / maxWeight) * CHART_H;
 
-  const toX = (d: number) => pad.left + (d / totalDist) * chartW;
-  const toY = (wt: number) => pad.top + chartH - (wt / maxWeight) * chartH;
+    const linePath = curve
+      .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.foodWeightG).toFixed(1)}`)
+      .join(' ');
 
-  // Build area + line paths
-  const linePath = curve
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.foodWeightG).toFixed(1)}`)
-    .join(' ');
+    const areaPath =
+      linePath +
+      ` L${toX(totalDist).toFixed(1)},${(PAD.top + CHART_H).toFixed(1)}` +
+      ` L${PAD.left},${(PAD.top + CHART_H).toFixed(1)} Z`;
 
-  const areaPath =
-    linePath +
-    ` L${toX(totalDist).toFixed(1)},${(pad.top + chartH).toFixed(1)}` +
-    ` L${pad.left},${(pad.top + chartH).toFixed(1)} Z`;
-
-  // Weight zone thresholds — dynamically spaced based on maxWeight
-  const zoneStep = maxWeight <= 1500 ? 500 : 1000;
-  const zones: { weight: number; color: string; label: string }[] = [];
-  for (let wt = zoneStep; wt < maxWeight; wt += zoneStep) {
-    zones.push({
-      weight: wt,
-      color: 'rgba(255,255,255,0.08)',
-      label: wt >= 1000 ? `${(wt / 1000).toFixed(wt % 1000 === 0 ? 0 : 1)} kg` : `${wt}g`,
-    });
-  }
-
-  // Day separators
-  const dayBreaks: number[] = [];
-  for (let i = 1; i < curve.length; i++) {
-    if (curve[i].dayNumber !== curve[i - 1].dayNumber) {
-      dayBreaks.push(curve[i].distanceKm);
+    const zoneStep = maxWeight <= 1500 ? 500 : 1000;
+    const zones: { weight: number; label: string }[] = [];
+    for (let wt = zoneStep; wt < maxWeight; wt += zoneStep) {
+      zones.push({
+        weight: wt,
+        label: wt >= 1000 ? `${(wt / 1000).toFixed(wt % 1000 === 0 ? 0 : 1)} kg` : `${wt}g`,
+      });
     }
-  }
+
+    const dayBreaks: number[] = [];
+    for (let i = 1; i < curve.length; i++) {
+      if (curve[i].dayNumber !== curve[i - 1].dayNumber) {
+        dayBreaks.push(curve[i].distanceKm);
+      }
+    }
+
+    const purchaseDots = curve.filter(
+      (p, i) => i > 0 && p.foodWeightG > curve[i - 1].foodWeightG + 50,
+    );
+
+    return { totalDist, maxWeight, linePath, areaPath, zones, dayBreaks, purchaseDots, toX, toY };
+  }, [curve]);
+
+  const { totalDist, maxWeight, linePath, areaPath, zones, dayBreaks, purchaseDots, toX, toY } = derived;
 
   return (
     <div className="weight-graph">
@@ -56,7 +62,7 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
           max {(plan.resupply.maxCarryWeightG / 1000).toFixed(1)} kg
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="weight-graph-svg">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="weight-graph-svg">
         <defs>
           <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5" />
@@ -66,8 +72,8 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
 
         {/* Y-axis scale labels: 0g at bottom, max at top */}
         <text
-          x={pad.left - 6}
-          y={pad.top + chartH}
+          x={PAD.left - 6}
+          y={PAD.top + CHART_H}
           fill="rgba(255,255,255,0.4)"
           fontSize="11"
           textAnchor="end"
@@ -76,8 +82,8 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
           0g
         </text>
         <text
-          x={pad.left - 6}
-          y={pad.top}
+          x={PAD.left - 6}
+          y={PAD.top}
           fill="rgba(255,255,255,0.4)"
           fontSize="11"
           textAnchor="end"
@@ -90,16 +96,16 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
         {zones.map((z, i) => (
             <g key={i}>
               <line
-                x1={pad.left}
+                x1={PAD.left}
                 y1={toY(z.weight)}
-                x2={w}
+                x2={W}
                 y2={toY(z.weight)}
                 stroke="rgba(255,255,255,0.08)"
                 strokeWidth="1"
                 strokeDasharray="4,4"
               />
               <text
-                x={w - 4}
+                x={W - 4}
                 y={toY(z.weight) - 3}
                 fill="rgba(255,255,255,0.25)"
                 fontSize="10"
@@ -115,9 +121,9 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
           <line
             key={i}
             x1={toX(km)}
-            y1={pad.top}
+            y1={PAD.top}
             x2={toX(km)}
-            y2={pad.top + chartH}
+            y2={PAD.top + CHART_H}
             stroke="rgba(255,255,255,0.1)"
             strokeWidth="1"
             strokeDasharray="2,4"
@@ -130,17 +136,15 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
         <path d={linePath} fill="none" stroke="#fbbf24" strokeWidth="2" />
 
         {/* Purchase dots (weight spikes) */}
-        {curve
-          .filter((p, i) => i > 0 && p.foodWeightG > curve[i - 1].foodWeightG + 50)
-          .map((p, i) => (
-            <circle
-              key={i}
-              cx={toX(p.distanceKm)}
-              cy={toY(p.foodWeightG)}
-              r="3"
-              fill="#fbbf24"
-            />
-          ))}
+        {purchaseDots.map((p, i) => (
+          <circle
+            key={i}
+            cx={toX(p.distanceKm)}
+            cy={toY(p.foodWeightG)}
+            r="3"
+            fill="#fbbf24"
+          />
+        ))}
       </svg>
       <div className="weight-graph-axis">
         <span>0 km</span>
@@ -149,4 +153,4 @@ export function CarryWeightGraph({ plan }: { plan: UnifiedShoppingPlan }) {
       </div>
     </div>
   );
-}
+});

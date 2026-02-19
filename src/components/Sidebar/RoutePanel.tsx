@@ -4,7 +4,7 @@ import { useRouteStore } from '../../store/routeStore';
 import { distanceKm } from '../../utils/distance';
 import { useSupplyStore } from '../../store/supplyStore';
 import { exportGPX, downloadGPX, readFileAsText, parseGPX } from '../../utils/gpx';
-import { parseGpxToWaypoints, exportRouteToGpx } from '../../services/gpx';
+import { parseGpxToWaypoints } from '../../services/gpx';
 import { EmptyState, StatCard, RangeSlider } from '../ui';
 import type { RoutingProfile } from '../../types';
 

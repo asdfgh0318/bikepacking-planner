@@ -13,6 +13,7 @@ import {
   WEATHER_HEAT_DANGER_C,
   WEATHER_FREEZE_WARNING_C,
   WEATHER_FREEZE_DANGER_C,
+  WEATHER_TIMEOUT_MS,
 } from '../config';
 
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
@@ -124,7 +125,7 @@ async function fetchOpenMeteo(
     forecast_days: String(Math.min(forecastDays, WEATHER_MAX_FORECAST_DAYS)),
   });
 
-  const res = await fetchWithRetry(`${OPEN_METEO_URL}?${params}`, { signal });
+  const res = await fetchWithRetry(`${OPEN_METEO_URL}?${params}`, { signal, timeout: WEATHER_TIMEOUT_MS });
   if (!res.ok) {
     throw new Error(`Open-Meteo error: ${res.status} ${res.statusText}`);
   }

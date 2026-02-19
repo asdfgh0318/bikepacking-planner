@@ -1,4 +1,5 @@
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { INPOST_TIMEOUT_MS } from '../config';
 
 export interface InPostPoint {
   name: string;
@@ -28,7 +29,7 @@ export async function fetchPaczkomaty(
     `${(bounds.north + bounds.south) / 2},${(bounds.east + bounds.west) / 2}`
   );
 
-  const res = await fetchWithRetry(url.toString(), { signal });
+  const res = await fetchWithRetry(url.toString(), { signal, timeout: INPOST_TIMEOUT_MS });
   if (!res.ok) {
     throw new Error(`InPost API error: ${res.status}`);
   }

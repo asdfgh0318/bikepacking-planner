@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Marker, Popup } from 'react-map-gl/maplibre';
+import type { MarkerEvent } from 'react-map-gl/maplibre';
 import { useSupplyStore } from '../../store/supplyStore';
 import { useRouteStore } from '../../store/routeStore';
 import { SUPPLY_COLORS, SUPPLY_ICONS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
@@ -22,6 +23,50 @@ function SvgIcon({ svgString }: { svgString: string }) {
   );
   return <div ref={ref} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />;
 }
+
+const SupplyMarkerItem = React.memo(function SupplyMarkerItem({
+  pt,
+  onToggle,
+}: {
+  pt: SupplyPoint;
+  onToggle: (pt: SupplyPoint) => void;
+}) {
+  const c = SUPPLY_COLORS[pt.type] || SUPPLY_COLORS.shop;
+  const svg = SUPPLY_ICONS[pt.type] || SUPPLY_ICONS.shop;
+  const handleClick = useCallback(
+    (e: MarkerEvent<MouseEvent>) => {
+      e.originalEvent.stopPropagation();
+      onToggle(pt);
+    },
+    [pt, onToggle],
+  );
+  return (
+    <Marker
+      latitude={pt.lat}
+      longitude={pt.lng}
+      anchor="center"
+      onClick={handleClick}
+    >
+      <div
+        className="supply-marker"
+        style={{
+          width: 30,
+          height: 30,
+          background: c.bg,
+          border: `2.5px solid ${c.border}`,
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          cursor: 'pointer',
+        }}
+      >
+        <SvgIcon svgString={svg} />
+      </div>
+    </Marker>
+  );
+});
 
 export function SupplyMarkers() {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
@@ -77,42 +122,15 @@ export function SupplyMarkers() {
     });
   }, [supplyPoints, bailOutPoints, showPaczkomaty, showShops, showWater, showCampsites, showRepair, showBailOut, showFuel, showFood, showPharmacy, showToilets, showHalts, nightStopCoords]);
 
+  const handleToggle = useCallback((pt: SupplyPoint) => {
+    setPopupPoint((prev) => (prev?.id === pt.id ? null : pt));
+  }, []);
+
   return (
     <>
-      {visible.map((pt) => {
-        const c = SUPPLY_COLORS[pt.type] || SUPPLY_COLORS.shop;
-        const svg = SUPPLY_ICONS[pt.type] || SUPPLY_ICONS.shop;
-        return (
-          <Marker
-            key={pt.id}
-            latitude={pt.lat}
-            longitude={pt.lng}
-            anchor="center"
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              setPopupPoint(popupPoint?.id === pt.id ? null : pt);
-            }}
-          >
-            <div
-              className="supply-marker"
-              style={{
-                width: 30,
-                height: 30,
-                background: c.bg,
-                border: `2.5px solid ${c.border}`,
-                borderRadius: 8,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                cursor: 'pointer',
-              }}
-            >
-              <SvgIcon svgString={svg} />
-            </div>
-          </Marker>
-        );
-      })}
+      {visible.map((pt) => (
+        <SupplyMarkerItem key={pt.id} pt={pt} onToggle={handleToggle} />
+      ))}
       {popupPoint && (
         <Popup
           latitude={popupPoint.lat}

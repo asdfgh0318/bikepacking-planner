@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { toast } from 'sonner';
 import { useSupplyStore } from '../../store/supplyStore';
-import { useResupplyStore, SEASON_DEFAULTS } from '../../store/resupplyStore';
+import { useResupplyStore } from '../../store/resupplyStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Toggle, RangeSlider } from '../ui';
 import { debugLog } from '../../utils/debugLogger';
@@ -24,7 +24,7 @@ function useDebugLog() {
 }
 
 export function SettingsPanel() {
-  const logCount = useDebugLog();
+  useDebugLog(); // subscribe to trigger re-renders
   const [showRecent, setShowRecent] = useState(false);
   const theme = useSettingsStore((s) => s.theme);
   const toggleTheme = useSettingsStore((s) => s.toggleTheme);

@@ -10,14 +10,20 @@
 // API Timeouts
 // ---------------------------------------------------------------------------
 
-/** BRouter routing API timeout (ms). Generous because complex routes are slow. */
-export const BROUTER_TIMEOUT_MS = 45_000;
+/** BRouter routing API timeout (ms). */
+export const BROUTER_TIMEOUT_MS = 15_000;
 
 /** Overpass (OSM) fetch timeout (ms) — client-side limit for fetchWithRetry. */
 export const OVERPASS_TIMEOUT_MS = 30_000;
 
 /** Overpass server-side query timeout (seconds), embedded in the QL query. */
 export const OVERPASS_QUERY_TIMEOUT_S = 25;
+
+/** Open-Meteo weather API fetch timeout (ms). */
+export const WEATHER_TIMEOUT_MS = 10_000;
+
+/** InPost paczkomat API fetch timeout (ms). */
+export const INPOST_TIMEOUT_MS = 10_000;
 
 /** Overpass API endpoints, tried in order for failover. */
 export const OVERPASS_ENDPOINTS = [

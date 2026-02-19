@@ -5,7 +5,6 @@ import type {
   SupplyPoint,
   DietProfile,
   PaczkomatConfig,
-  NightStop,
 } from '../types';
 
 // ---------------------------------------------------------------------------

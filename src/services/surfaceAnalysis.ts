@@ -1,4 +1,4 @@
-import * as turf from '@turf/turf';
+import { lineString, length, point, nearestPointOnLine } from '@turf/turf';
 import { OVERPASS_QUERY_TIMEOUT_S } from '../config';
 import { debugLog } from '../utils/debugLogger';
 
@@ -101,8 +101,8 @@ export function analyzeSurface(
   routeGeometry: GeoJSON.LineString,
   ways: OverpassWayElement[],
 ): SurfaceSummary {
-  const routeLine = turf.lineString(routeGeometry.coordinates);
-  const totalLengthKm = turf.length(routeLine, { units: 'kilometers' });
+  const routeLine = lineString(routeGeometry.coordinates);
+  const totalLengthKm = length(routeLine, { units: 'kilometers' });
 
   if (totalLengthKm === 0) {
     return {
@@ -122,8 +122,8 @@ export function analyzeSurface(
     // Project first and last node of the way onto the route
     const positions: number[] = [];
     for (const node of way.geometry) {
-      const pt = turf.point([node.lon, node.lat]);
-      const snapped = turf.nearestPointOnLine(routeLine, pt);
+      const pt = point([node.lon, node.lat]);
+      const snapped = nearestPointOnLine(routeLine, pt);
       const locationKm = snapped.properties.location ?? 0;
       positions.push(locationKm);
     }

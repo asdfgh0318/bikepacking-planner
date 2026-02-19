@@ -178,8 +178,9 @@ export function generateSupplyOrders(
     // Fill until we hit daily calorie target
     // Prioritize items available at this stop type
     const sortedFoods = [...foods].sort((a, b) => {
-      const aAvail = a.availableAt.includes(point.type) ? 0 : 1;
-      const bAvail = b.availableAt.includes(point.type) ? 0 : 1;
+      const shopType = point.type as FoodItem['availableAt'][number];
+      const aAvail = a.availableAt.includes(shopType) ? 0 : 1;
+      const bAvail = b.availableAt.includes(shopType) ? 0 : 1;
       return aAvail - bAvail;
     });
 

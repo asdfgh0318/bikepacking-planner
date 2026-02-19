@@ -99,7 +99,7 @@ export async function getCachedPOIs(
 
   if (result.length === 0) return [];
 
-  return result[0].values.map(row => JSON.parse(row[0] as string) as SupplyPoint);
+  return result[0].values.map((row: unknown[]) => JSON.parse(row[0] as string) as SupplyPoint);
 }
 
 /**
@@ -162,7 +162,7 @@ export async function evictStaleCache(): Promise<number> {
 
   if (expired.length === 0 || expired[0].values.length === 0) return 0;
 
-  const hashes = expired[0].values.map(r => `'${r[0]}'`).join(',');
+  const hashes = expired[0].values.map((r: unknown[]) => `'${r[0]}'`).join(',');
 
   db.run(`DELETE FROM poi_cache WHERE route_hash IN (${hashes})`);
   const countResult = db.exec(`SELECT changes()`);

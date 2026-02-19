@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertTriangle, CloudRain, Wind, Thermometer } from 'lucide-react';
 import type { UnifiedShoppingPlan } from '../../types';
 import { useResupplyStore } from '../../store/resupplyStore';
@@ -38,15 +38,30 @@ function getTripDayDateStr(tripStartDate: string | undefined, dayNumber: number)
 export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
   const routeWeather = useResupplyStore((s) => s.routeWeather);
   const tripStartDate = useResupplyStore((s) => s.resupplyConfig.tripStartDate);
-  const weatherWarnings = routeWeather ? getWeatherWarnings(routeWeather.days) : [];
+  const weatherWarnings = useMemo(
+    () => (routeWeather ? getWeatherWarnings(routeWeather.days) : []),
+    [routeWeather],
+  );
+
+  const dayMeta = useMemo(
+    () => plan.dayBreakdown.map((day) => {
+      const dateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
+      return {
+        dayNumber: day.dayNumber,
+        dateStr,
+        isTradingDay: dateStr !== null && isTradingSunday(dateStr),
+      };
+    }),
+    [plan.dayBreakdown, tripStartDate],
+  );
 
   return (
     <div className="shopping-timeline">
       {plan.dayBreakdown.map((day) => {
         const dayWeather = routeWeather?.days.find(d => d.dayNumber === day.dayNumber);
         const hasWeather = dayWeather && dayWeather.weatherCode !== -1;
-        const dayDateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
-        const isTradingDay = dayDateStr !== null && isTradingSunday(dayDateStr);
+        const meta = dayMeta.find((m) => m.dayNumber === day.dayNumber);
+        const isTradingDay = meta?.isTradingDay ?? false;
 
         return (
         <div key={day.dayNumber} className="timeline-day">

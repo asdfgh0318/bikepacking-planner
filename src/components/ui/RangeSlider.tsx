@@ -5,7 +5,7 @@ interface RangeSliderProps {
   min: number;
   max: number;
   step: number;
-  unit: string;
+  unit?: string;
   minLabel?: string;
   maxLabel?: string;
 }

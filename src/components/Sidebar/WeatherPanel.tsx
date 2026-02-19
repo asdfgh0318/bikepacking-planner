@@ -18,7 +18,7 @@ function formatHours(h: number): string {
   return `${Math.floor(h)}h${Math.round((h % 1) * 60).toString().padStart(2, '0')}`;
 }
 
-function getTravelImpact(weather: DayWeather, segment: DaySegment): { text: string; severity: 'good' | 'caution' | 'bad' } {
+function getTravelImpact(weather: DayWeather, _segment: DaySegment): { text: string; severity: 'good' | 'caution' | 'bad' } {
   if (weather.weatherCode === -1) return { text: 'No forecast data', severity: 'good' };
 
   const issues: string[] = [];

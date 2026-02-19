@@ -4,7 +4,6 @@ import type {
   SupplyPoint,
   SupplyGap,
   PaczkomatConfig,
-  ResupplyStrategy,
   UnifiedShoppingPlan,
   DayShoppingBreakdown,
 } from '../types';
