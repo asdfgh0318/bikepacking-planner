@@ -43,15 +43,18 @@ export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: {
     [routeWeather],
   );
 
-  const dayMeta = useMemo(
-    () => plan.dayBreakdown.map((day) => {
-      const dateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
-      return {
-        dayNumber: day.dayNumber,
-        dateStr,
-        isTradingDay: dateStr !== null && isTradingSunday(dateStr),
-      };
-    }),
+  const dayMetaMap = useMemo(
+    () => {
+      const map = new Map<number, { dateStr: string | null; isTradingDay: boolean }>();
+      for (const day of plan.dayBreakdown) {
+        const dateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
+        map.set(day.dayNumber, {
+          dateStr,
+          isTradingDay: dateStr !== null && isTradingSunday(dateStr),
+        });
+      }
+      return map;
+    },
     [plan.dayBreakdown, tripStartDate],
   );
 
@@ -60,8 +63,7 @@ export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: {
       {plan.dayBreakdown.map((day) => {
         const dayWeather = routeWeather?.days.find(d => d.dayNumber === day.dayNumber);
         const hasWeather = dayWeather && dayWeather.weatherCode !== -1;
-        const meta = dayMeta.find((m) => m.dayNumber === day.dayNumber);
-        const isTradingDay = meta?.isTradingDay ?? false;
+        const isTradingDay = dayMetaMap.get(day.dayNumber)?.isTradingDay ?? false;
 
         return (
         <div key={day.dayNumber} className="timeline-day">

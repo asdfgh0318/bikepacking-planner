@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { CloudSun, CloudOff, CloudRain, Wind, Thermometer, AlertTriangle, Droplets } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
@@ -139,7 +140,7 @@ export function WeatherPanel() {
   const overallTempMax = Math.max(...daysWithData.map((d) => d.tempMax));
   const totalPrecip = daysWithData.reduce((sum, d) => sum + d.precipitationSum, 0);
   const maxWind = Math.max(...daysWithData.map((d) => d.windSpeedMax));
-  const weatherWarnings = getWeatherWarnings(routeWeather.days);
+  const weatherWarnings = useMemo(() => getWeatherWarnings(routeWeather.days), [routeWeather.days]);
 
   return (
     <div className="panel">
