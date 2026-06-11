@@ -7,6 +7,11 @@
 </p>
 
 <p align="center">
+  <a href="https://asdfgh0318.github.io/bikepacking-planner/"><strong>Live app</strong></a>
+</p>
+
+<p align="center">
+  <img src="https://github.com/asdfgh0318/bikepacking-planner/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/react-18.3-61dafb?logo=react&logoColor=white" alt="React">
   <img src="https://img.shields.io/badge/typescript-5.6-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/maplibre--gl-4.7-396CB2?logo=maplibre&logoColor=white" alt="MapLibre">
@@ -47,6 +52,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 - **5 resupply strategies** — auto, daily-ration, grazer, ultralight, self-sufficient
 - **Paczkomat scoring** — ranks InPost lockers by distance, detour, and timing
 - **Shopping timeline** with day-by-day breakdowns
+- **Sunday-aware planning** — knows Poland's trading-Sunday calendar, so it won't send you to a closed Biedronka
 
 ### Weather
 - **16-day forecast** aligned to your trip dates via Open-Meteo
@@ -56,7 +62,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 ### Gear & Diet
 - **Gear tracker** with weight calculator and category breakdown
 - **Diet planner** with 5 profiles: standard, high-energy, ultralight, keto, vegan
-- **Macro tracking** and budget estimation
+- **Macro tracking** per diet profile
 - **Carry weight curve** visualization with heavy-load warnings
 
 ### Offline & PWA
@@ -81,7 +87,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 | Local DB | SQLite via sql.js (in-browser WASM) |
 | Icons | Lucide React |
 | Toasts | Sonner |
-| Testing | Vitest |
+| Testing | Vitest (unit) + Playwright (E2E) |
 | PWA | vite-plugin-pwa |
 
 **Zero backend.** Everything runs in the browser. All APIs used are free and keyless.
@@ -117,11 +123,11 @@ npm run lint       # Lint with ESLint
 src/
 ├── components/
 │   ├── Map/              # MapView, route layer, POI markers, day/weather markers
-│   ├── Sidebar/          # All planning panels (route, supply, resupply, weather, gear, diet, budget)
+│   ├── Sidebar/          # All planning panels (route, supply, resupply, weather, gear, diet)
 │   ├── ElevationProfile  # Elevation chart
 │   ├── Wizard            # Onboarding flow
 │   └── ui/               # Reusable UI components
-├── store/                # Zustand stores (route, supply, resupply, gear, diet, budget)
+├── store/                # Zustand stores (route, supply, resupply, gear, diet, settings)
 ├── hooks/                # Data fetching & calculation hooks
 ├── services/             # API clients (BRouter, Overpass, InPost, weather, GPX, caching)
 ├── types/                # TypeScript interfaces
