@@ -1,10 +1,9 @@
-import { useMemo } from 'react';
 import { CloudSun, CloudOff, CloudRain, Wind, Thermometer, AlertTriangle, Droplets } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
 import { StatCard, EmptyState } from '../ui';
-import type { DayWeather, DaySegment } from '../../types';
+import type { DayWeather } from '../../types';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -19,7 +18,7 @@ function formatHours(h: number): string {
   return `${Math.floor(h)}h${Math.round((h % 1) * 60).toString().padStart(2, '0')}`;
 }
 
-function getTravelImpact(weather: DayWeather, _segment: DaySegment): { text: string; severity: 'good' | 'caution' | 'bad' } {
+function getTravelImpact(weather: DayWeather): { text: string; severity: 'good' | 'caution' | 'bad' } {
   if (weather.weatherCode === -1) return { text: 'No forecast data', severity: 'good' };
 
   const issues: string[] = [];
@@ -140,7 +139,7 @@ export function WeatherPanel() {
   const overallTempMax = Math.max(...daysWithData.map((d) => d.tempMax));
   const totalPrecip = daysWithData.reduce((sum, d) => sum + d.precipitationSum, 0);
   const maxWind = Math.max(...daysWithData.map((d) => d.windSpeedMax));
-  const weatherWarnings = useMemo(() => getWeatherWarnings(routeWeather.days), [routeWeather.days]);
+  const weatherWarnings = getWeatherWarnings(routeWeather.days);
 
   return (
     <div className="panel">
@@ -186,7 +185,7 @@ export function WeatherPanel() {
             );
           }
 
-          const impact = getTravelImpact(dayWeather, seg);
+          const impact = getTravelImpact(dayWeather);
 
           return (
             <div key={seg.dayNumber} className={`weather-day-card severity-${impact.severity}`}>

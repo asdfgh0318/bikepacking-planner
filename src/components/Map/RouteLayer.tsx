@@ -58,11 +58,13 @@ export function RouteLayer({ mapRef, mapLoaded }: Props) {
     });
   }, [mapRef, mapLoaded, routeGeometry]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — capture the map instance when the effect runs,
+  // not via the ref at teardown time (the ref may already be cleared)
   useEffect(() => {
+    if (!mapLoaded) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
     return () => {
-      const map = mapRef.current?.getMap();
-      if (!map) return;
       try {
         if (map.getLayer(MAIN_LAYER_ID)) map.removeLayer(MAIN_LAYER_ID);
         if (map.getLayer(SHADOW_LAYER_ID)) map.removeLayer(SHADOW_LAYER_ID);
@@ -71,7 +73,7 @@ export function RouteLayer({ mapRef, mapLoaded }: Props) {
         // map may already be destroyed
       }
     };
-  }, [mapRef]);
+  }, [mapRef, mapLoaded]);
 
   return null;
 }

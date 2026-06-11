@@ -47,8 +47,9 @@ export async function fetchMountainPasses(
 
     if (!res.ok) throw new Error(`Wikidata error: ${res.status}`);
 
-    const data = await res.json();
-    const results: MountainPass[] = (data.results?.bindings || []).map((b: any) => ({
+    type SparqlBinding = Record<string, { value?: string } | undefined>;
+    const data: { results?: { bindings?: SparqlBinding[] } } = await res.json();
+    const results: MountainPass[] = (data.results?.bindings || []).map((b) => ({
       id: b.item?.value?.split('/').pop() || '',
       name: b.itemLabel?.value || 'Unknown',
       lat: parseFloat(b.lat?.value || '0'),
