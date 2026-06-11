@@ -19,15 +19,17 @@ export default defineConfig({
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'any',
-        start_url: '/',
+        // Relative URLs so the app works at any base path (e.g. GitHub Pages)
+        start_url: './',
+        scope: './',
         icons: [
           {
-            src: '/icon-192.svg',
+            src: 'icon-192.svg',
             sizes: '192x192',
             type: 'image/svg+xml',
           },
           {
-            src: '/icon-192.svg',
+            src: 'icon-192.svg',
             sizes: '512x512',
             type: 'image/svg+xml',
           },
