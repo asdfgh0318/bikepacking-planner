@@ -62,8 +62,9 @@ describe('isTradingSunday', () => {
     expect(isTradingSunday('2027-06-06')).toBe(false); // ordinary Sunday in 2027
   });
 
-  it('tolerates malformed input', () => {
-    expect(isTradingSunday('')).toBe(false);
+  it('tolerates malformed input without computing a calendar', () => {
+    expect(isTradingSunday('')).toBe(false); // Number('') === 0 — must not compute year 0
     expect(isTradingSunday('not-a-date')).toBe(false);
+    expect(isTradingSunday('0000-01-26')).toBe(false);
   });
 });

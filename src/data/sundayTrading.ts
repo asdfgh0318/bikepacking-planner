@@ -81,18 +81,12 @@ const cache = new Map<number, ReadonlySet<string>>();
  */
 export function isTradingSunday(dateStr: string): boolean {
   const year = Number(dateStr.slice(0, 4));
-  if (!Number.isInteger(year)) return false;
+  // Rejects NaN and degenerate years (Number('') === 0 would slip past an integer check)
+  if (!(year >= 1000 && year <= 9999)) return false;
   let set = cache.get(year);
   if (!set) {
     set = new Set(tradingSundaysFor(year));
     cache.set(year, set);
   }
   return set.has(dateStr);
-}
-
-/**
- * Returns a short label for UI display.
- */
-export function getTradingSundayLabel(): string {
-  return 'Trading Sunday';
 }

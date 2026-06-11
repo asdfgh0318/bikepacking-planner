@@ -13,7 +13,8 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev -- --port 5183 --strictPort',
     port: 5183,
-    reuseExistingServer: false,
+    // A server on 5183 can only be one we started ourselves, so reuse is safe locally
+    reuseExistingServer: !process.env.CI,
     timeout: 30000,
   },
   projects: [

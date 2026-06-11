@@ -17,21 +17,23 @@ export function useMountainPasses(): void {
       setMountainPasses([]);
       return;
     }
+    // Local binding narrows the type across the async closure (no ! assertions)
+    const geometry = routeGeometry;
 
     const controller = new AbortController();
 
     async function load() {
-      const bounds = getRouteBounds(routeGeometry!, 5); // 5km padding
+      const bounds = getRouteBounds(geometry, 5); // 5km padding
       const passes = await fetchMountainPasses(bounds, controller.signal);
 
       // Route length in km
-      const routeLengthKm = length(lineString(routeGeometry!.coordinates), { units: 'kilometers' });
+      const routeLengthKm = length(lineString(geometry.coordinates), { units: 'kilometers' });
 
       // Compute distance along route for each pass and filter by proximity
       const withDistance = passes
         .map(p => ({
-          pass: { ...p, distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, p.lat, p.lng) },
-          distToRoute: getDistanceToRoute(routeGeometry!, p.lat, p.lng),
+          pass: { ...p, distanceFromStartKm: getDistanceAlongRoute(geometry, p.lat, p.lng) },
+          distToRoute: getDistanceToRoute(geometry, p.lat, p.lng),
         }))
         .filter(({ pass, distToRoute }) =>
           distToRoute <= MAX_DISTANCE_FROM_ROUTE_KM &&
