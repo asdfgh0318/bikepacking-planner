@@ -18,7 +18,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - run: npm run build
+      # Same base path as the Pages deploy, so CI exercises the config that ships
+      - run: npm run build -- --base=/bikepacking-planner/
 
   e2e:
     name: Playwright E2E
@@ -37,6 +38,10 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium
         if: steps.playwright-cache.outputs.cache-hit != 'true'
+      # System libs (apt) are not in the browser cache — reinstall them even
+      # on cache hit so a runner-image change can't strand a broken Chromium
+      - run: npx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
       - run: npx playwright test
       - uses: actions/upload-artifact@v4
         if: failure()

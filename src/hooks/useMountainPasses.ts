@@ -55,7 +55,11 @@ export function useMountainPasses(): void {
       setMountainPasses(result);
     }
 
-    load();
+    load().catch((err) => {
+      // Abort on route change/unmount is routine, not an error
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      debugLog.warn('wikidata', 'passes:error', err instanceof Error ? err.message : String(err));
+    });
     return () => controller.abort();
   }, [routeGeometry, setMountainPasses]);
 }

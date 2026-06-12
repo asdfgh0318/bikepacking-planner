@@ -20,14 +20,17 @@ import {
 const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 const weatherCache = new Map<string, RouteWeather>();
 
-function buildCacheKey(coord: [number, number], tripStartDate: string): string {
+// numDays is part of the key: the result's days array is sized to the trip's
+// day count, and the day count can legitimately change for the same route
+// (e.g. day-end realignment once supply points arrive).
+function buildCacheKey(coord: [number, number], tripStartDate: string, numDays: number): string {
   const lng = coord[0].toFixed(2);
   const lat = coord[1].toFixed(2);
-  return `${lng},${lat}|${tripStartDate}`;
+  return `${lng},${lat}|${tripStartDate}|${numDays}`;
 }
 
-function getCachedWeather(coord: [number, number], tripStartDate: string): RouteWeather | null {
-  const key = buildCacheKey(coord, tripStartDate);
+function getCachedWeather(coord: [number, number], tripStartDate: string, numDays: number): RouteWeather | null {
+  const key = buildCacheKey(coord, tripStartDate, numDays);
   const entry = weatherCache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.fetchedAt >= WEATHER_CACHE_TTL_MS) {
@@ -37,8 +40,8 @@ function getCachedWeather(coord: [number, number], tripStartDate: string): Route
   return entry;
 }
 
-function setCachedWeather(coord: [number, number], tripStartDate: string, data: RouteWeather): void {
-  const key = buildCacheKey(coord, tripStartDate);
+function setCachedWeather(coord: [number, number], tripStartDate: string, numDays: number, data: RouteWeather): void {
+  const key = buildCacheKey(coord, tripStartDate, numDays);
   weatherCache.set(key, data);
 }
 
@@ -144,13 +147,13 @@ export async function fetchRouteWeather(
   signal?: AbortSignal
 ): Promise<RouteWeather> {
   const [lng, lat] = getRouteMidpoint(routeGeometry);
+  const numDays = daySegments.length;
 
-  // Check cache — keyed by rounded coordinate + trip date
-  const cached = getCachedWeather([lng, lat], tripStartDate);
+  // Check cache — keyed by rounded coordinate + trip date + day count
+  const cached = getCachedWeather([lng, lat], tripStartDate, numDays);
   if (cached) {
     return cached;
   }
-  const numDays = daySegments.length;
 
   // Check how far in the future the trip is (use noon to avoid timezone day-shift)
   const startDate = new Date(tripStartDate + 'T12:00:00');
@@ -225,7 +228,7 @@ export async function fetchRouteWeather(
     forecastAvailable: true,
   };
 
-  setCachedWeather([lng, lat], tripStartDate, result);
+  setCachedWeather([lng, lat], tripStartDate, numDays, result);
   return result;
 }
 
