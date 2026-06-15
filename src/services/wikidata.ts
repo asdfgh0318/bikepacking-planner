@@ -12,6 +12,8 @@ export interface MountainPass {
 
 const WIKIDATA_ENDPOINT = 'https://query.wikidata.org/sparql';
 
+type SparqlBinding = Record<string, { value?: string } | undefined>;
+
 export async function fetchMountainPasses(
   bounds: { south: number; north: number; west: number; east: number },
   signal?: AbortSignal
@@ -47,7 +49,6 @@ export async function fetchMountainPasses(
 
     if (!res.ok) throw new Error(`Wikidata error: ${res.status}`);
 
-    type SparqlBinding = Record<string, { value?: string } | undefined>;
     const data: { results?: { bindings?: SparqlBinding[] } } = await res.json();
     const results: MountainPass[] = (data.results?.bindings || []).map((b) => ({
       id: b.item?.value?.split('/').pop() || '',
@@ -55,7 +56,7 @@ export async function fetchMountainPasses(
       lat: parseFloat(b.lat?.value || '0'),
       lng: parseFloat(b.lon?.value || '0'),
       elevation: parseFloat(b.elevation?.value || '0'),
-    })).filter((p: MountainPass) => p.lat !== 0 && p.lng !== 0 && p.elevation > 0);
+    })).filter((p) => p.lat !== 0 && p.lng !== 0 && p.elevation > 0);
 
     debugLog.info('wikidata', 'fetch:done', { count: results.length });
     return results;

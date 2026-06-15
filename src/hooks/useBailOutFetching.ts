@@ -36,7 +36,6 @@ export function useBailOutFetching(): void {
         setBailOutPoints(points);
         debugLog.info('bailout', 'points:loaded', { total: points.length });
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
         debugLog.error('bailout', 'fetch:error', err instanceof Error ? err.message : String(err));
       }
     }

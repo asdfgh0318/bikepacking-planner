@@ -7,7 +7,6 @@ import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { useDietStore } from '../store/dietStore';
 import { useResupplyStore } from '../store/resupplyStore';
-import { useBudgetStore } from '../store/budgetStore';
 import { useGearStore } from '../store/gearStore';
 import { DIET_PROFILES } from '../services/diet';
 import { generateUnifiedPlan } from '../services/unifiedPlan';
@@ -138,17 +137,6 @@ export function initAutoWatch() {
       } else {
         debugLog.debug('store:resupply', `${key}:changed`, to);
       }
-    }
-  });
-
-  // --- Budget Store ---
-  let prevBudget = { ...useBudgetStore.getState() };
-  useBudgetStore.subscribe((state) => {
-    const changes = diff(prevBudget as unknown as Record<string, unknown>, state as unknown as Record<string, unknown>);
-    prevBudget = { ...state };
-    if (Object.keys(changes).length === 0) return;
-    for (const [key, { to }] of Object.entries(changes)) {
-      debugLog.debug('store:budget', `${key}:changed`, to);
     }
   });
 

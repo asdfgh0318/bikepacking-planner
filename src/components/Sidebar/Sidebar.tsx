@@ -7,7 +7,6 @@ import { GearPanel } from './GearPanel';
 import { ResupplyPanel } from './ResupplyPanel';
 import { WeatherPanel } from './WeatherPanel';
 import { SettingsPanel } from './SettingsPanel';
-import { BudgetPanel } from './BudgetPanel';
 import { GPXImport } from './GPXImport';
 import { SavedRoutes } from './SavedRoutes';
 
@@ -84,7 +83,6 @@ export function Sidebar() {
               {activeTab === 'route' && (
                 <>
                   <RoutePanel />
-                  <BudgetPanel />
                   <GPXImport />
                   <SavedRoutes />
                 </>
