@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { isTradingSunday, tradingSundaysFor } from './sundayTrading';
+import {
+  isClosedOnNonTradingSunday,
+  isTradingSunday,
+  tradingSundaysFor,
+} from './sundayTrading';
+import type { SupplyPoint } from '../types';
+
+function makeStop(overrides: Partial<SupplyPoint> & Pick<SupplyPoint, 'type'>): SupplyPoint {
+  return {
+    id: 'x',
+    name: 'x',
+    lat: 0,
+    lng: 0,
+    distanceFromStartKm: 0,
+    ...overrides,
+  };
+}
 
 describe('tradingSundaysFor', () => {
   it('matches the known 2025 calendar', () => {
@@ -66,5 +82,35 @@ describe('isTradingSunday', () => {
     expect(isTradingSunday('')).toBe(false); // Number('') === 0 — must not compute year 0
     expect(isTradingSunday('not-a-date')).toBe(false);
     expect(isTradingSunday('0000-01-26')).toBe(false);
+  });
+});
+
+describe('isClosedOnNonTradingSunday', () => {
+  it('closes Biedronka via type (no brand flag needed)', () => {
+    expect(isClosedOnNonTradingSunday(makeStop({ type: 'biedronka' }))).toBe(true);
+  });
+
+  it('closes a Lidl/Kaufland/Auchan/etc. via the per-store brand flag', () => {
+    const lidl = makeStop({ type: 'supermarket', details: { brand: 'Lidl', closedOnNonTradingSunday: true } });
+    expect(isClosedOnNonTradingSunday(lidl)).toBe(true);
+  });
+
+  it('keeps franchise chains open', () => {
+    expect(isClosedOnNonTradingSunday(makeStop({ type: 'zabka' }))).toBe(false);
+    const lewiatan = makeStop({ type: 'supermarket', details: { brand: 'Lewiatan' } });
+    expect(isClosedOnNonTradingSunday(lewiatan)).toBe(false);
+  });
+
+  it("doesn't sweep up untagged generic supermarkets", () => {
+    // A shop=supermarket without brand:wikidata stays open — we won't fire
+    // a Sunday closure on something we can't identify as a covered chain.
+    const generic = makeStop({ type: 'supermarket', details: { brand: 'Local Sklep' } });
+    expect(isClosedOnNonTradingSunday(generic)).toBe(false);
+  });
+
+  it('leaves convenience/water/repair/etc. open', () => {
+    expect(isClosedOnNonTradingSunday(makeStop({ type: 'convenience' }))).toBe(false);
+    expect(isClosedOnNonTradingSunday(makeStop({ type: 'water' }))).toBe(false);
+    expect(isClosedOnNonTradingSunday(makeStop({ type: 'bakery' }))).toBe(false);
   });
 });

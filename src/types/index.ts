@@ -79,6 +79,8 @@ export interface SupplyPoint {
     brand?: string;
     operator?: string;
     website?: string;
+    /** Set at classification time for chains forced shut by the Polish trading-restriction act on non-trading Sundays. */
+    closedOnNonTradingSunday?: boolean;
     hasToilet?: boolean;
     hasWater?: boolean;
   };
