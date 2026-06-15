@@ -15,6 +15,7 @@ import type {
 import { FOOD_DB, calculateDailyCalories } from './diet';
 import { FOOD_TYPES } from './gapAnalysis';
 import { isOpenAt } from '../utils/openingHours';
+import { tripDayDate } from '../utils/date';
 import { isTradingSunday } from '../data/sundayTrading';
 import {
   SUNDAY_FOOD_BUFFER,
@@ -133,22 +134,6 @@ function getDayOfWeek(tripStartDate: string | undefined, dayNumber: number): num
   if (isNaN(start.getTime())) return 1;
   start.setDate(start.getDate() + dayNumber - 1);
   return start.getDay(); // 0=Sunday
-}
-
-/**
- * Compute the ISO date string (YYYY-MM-DD) for a given trip day number.
- * Day 1 corresponds to the trip start date.
- */
-function getTripDayDate(tripStartDate: string | undefined, dayNumber: number): string | null {
-  if (!tripStartDate) return null;
-  const d = new Date(tripStartDate + 'T00:00:00');
-  if (isNaN(d.getTime())) return null;
-  d.setDate(d.getDate() + dayNumber - 1);
-  // Use local date parts (not toISOString which converts to UTC and can shift the day)
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 // Polish Sunday trading ban: Biedronka (large retailer) always closed.
@@ -313,7 +298,7 @@ export function generateResupplyPlan(
     const segCals = calculateDailyCalories(profile, seg.distanceKm, seg.ascentM);
     const dayOfWeek = getDayOfWeek(config.tripStartDate, seg.dayNumber);
     const isSunday = dayOfWeek === 0;
-    const tripDate = getTripDayDate(config.tripStartDate, seg.dayNumber);
+    const tripDate = tripDayDate(config.tripStartDate, seg.dayNumber);
     const isTradingDay = isSunday && tripDate !== null && isTradingSunday(tripDate);
 
     const segStops = supplyPoints

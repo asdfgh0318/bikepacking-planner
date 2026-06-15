@@ -5,6 +5,7 @@ import { useResupplyStore } from '../../store/resupplyStore';
 import { weatherEmoji, getWeatherWarnings } from '../../services/weather';
 import { SUPPLY_COLORS, SUPPLY_BADGE_LETTERS } from '../../constants/supplyTypes';
 import { isTradingSunday } from '../../data/sundayTrading';
+import { tripDayDate } from '../../utils/date';
 
 /**
  * Format a decimal hour (e.g. 14.5) as "HH:MM" (e.g. "14:30").
@@ -27,14 +28,6 @@ function arrivalTimeClass(decimalHour: number): string {
   return 'timeline-arrival timeline-arrival-green';
 }
 
-function getTripDayDateStr(tripStartDate: string | undefined, dayNumber: number): string | null {
-  if (!tripStartDate) return null;
-  const d = new Date(tripStartDate + 'T00:00:00');
-  if (isNaN(d.getTime())) return null;
-  d.setDate(d.getDate() + dayNumber - 1);
-  return d.toISOString().slice(0, 10);
-}
-
 export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: { plan: UnifiedShoppingPlan }) {
   const routeWeather = useResupplyStore((s) => s.routeWeather);
   const tripStartDate = useResupplyStore((s) => s.resupplyConfig.tripStartDate);
@@ -47,7 +40,7 @@ export const ShoppingTimeline = React.memo(function ShoppingTimeline({ plan }: {
     () => {
       const map = new Map<number, { dateStr: string | null; isTradingDay: boolean }>();
       for (const day of plan.dayBreakdown) {
-        const dateStr = getTripDayDateStr(tripStartDate, day.dayNumber);
+        const dateStr = tripDayDate(tripStartDate, day.dayNumber);
         map.set(day.dayNumber, {
           dateStr,
           isTradingDay: dateStr !== null && isTradingSunday(dateStr),

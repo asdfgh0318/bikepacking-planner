@@ -1,6 +1,7 @@
 import { lineString, length, along } from '@turf/turf';
 import type { DayWeather, RouteWeather, WeatherCondition, DaySegment } from '../types';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
+import { addDays } from '../utils/date';
 import {
   WEATHER_CACHE_TTL_MS,
   WEATHER_TIMEZONE,
@@ -226,15 +227,6 @@ export async function fetchRouteWeather(
 
   setCachedWeather([lng, lat], tripStartDate, result);
   return result;
-}
-
-function addDays(isoDate: string, days: number): string {
-  const d = new Date(isoDate + 'T12:00:00'); // noon to avoid timezone day-shift
-  d.setDate(d.getDate() + days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }
 
 /**

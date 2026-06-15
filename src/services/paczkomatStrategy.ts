@@ -8,6 +8,7 @@ import type {
   ShippingPlan,
 } from '../types';
 import { FOOD_DB } from './diet';
+import { addDays } from '../utils/date';
 import {
   PACZKOMAT_MIN_USEFUL_KM,
   PACZKOMAT_EARLY_PENALTY,
@@ -26,12 +27,6 @@ function estimateLockerSize(totalWeightG: number): 'A' | 'B' | 'C' {
   if (totalWeightG < 500) return 'A';
   if (totalWeightG < 2000) return 'B';
   return 'C';
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
 }
 
 /**
