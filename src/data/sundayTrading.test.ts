@@ -18,6 +18,7 @@ function makeStop(overrides: Partial<SupplyPoint> & Pick<SupplyPoint, 'type'>): 
 }
 
 describe('tradingSundaysFor', () => {
+  // Three pre-Christmas Sundays per the 2024 amendment (effective 2025).
   it('matches the known 2025 calendar', () => {
     expect(tradingSundaysFor(2025)).toEqual([
       '2025-01-26', // last Sunday of January
@@ -25,7 +26,8 @@ describe('tradingSundaysFor', () => {
       '2025-04-27', // last Sunday of April
       '2025-06-29', // last Sunday of June
       '2025-08-31', // last Sunday of August
-      '2025-12-14', // two Sundays before Christmas
+      '2025-12-07', // three Sundays before Christmas
+      '2025-12-14',
       '2025-12-21', // Sunday before Christmas
     ]);
   });
@@ -37,6 +39,7 @@ describe('tradingSundaysFor', () => {
       '2026-04-26',
       '2026-06-28',
       '2026-08-30',
+      '2026-12-06',
       '2026-12-13',
       '2026-12-20',
     ]);
@@ -44,12 +47,13 @@ describe('tradingSundaysFor', () => {
 
   it('keeps working past the old hardcoded range (2027)', () => {
     const sundays = tradingSundaysFor(2027);
-    expect(sundays).toHaveLength(7);
+    expect(sundays).toHaveLength(8);
     expect(sundays).toContain('2027-01-31'); // last Sunday of January 2027
     expect(sundays).toContain('2027-03-21'); // Palm Sunday (Easter March 28)
-    // Christmas 2027 is a Saturday; the two Sundays before are Dec 12 + 19
+    // Christmas 2027 is a Saturday; the three Sundays before are Dec 5, 12, 19
     expect(sundays).toContain('2027-12-19');
     expect(sundays).toContain('2027-12-12');
+    expect(sundays).toContain('2027-12-05');
     // every result is actually a Sunday
     for (const s of sundays) {
       expect(new Date(`${s}T12:00:00Z`).getUTCDay()).toBe(0);
@@ -58,10 +62,11 @@ describe('tradingSundaysFor', () => {
 
   it('handles Christmas falling on a Sunday (2033)', () => {
     const sundays = tradingSundaysFor(2033);
-    // Dec 25 2033 is a Sunday and is NOT a trading day; the two before are
+    // Dec 25 2033 is a Sunday and is NOT a trading day; the three before are
     expect(sundays).not.toContain('2033-12-25');
     expect(sundays).toContain('2033-12-18');
     expect(sundays).toContain('2033-12-11');
+    expect(sundays).toContain('2033-12-04');
   });
 });
 

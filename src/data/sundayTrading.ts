@@ -1,15 +1,22 @@
 /**
  * Polish Sunday trading exception calendar.
  *
- * Poland bans most retail on Sundays, but ~7 Sundays per year are exempt
+ * Poland bans most retail on Sundays, but 8 Sundays per year are exempt
  * (trading Sundays). On those days all shops — including large retailers
  * like Biedronka — are open as normal.
  *
  * Per the trading-restriction act (ustawa o ograniczeniu handlu w niedziele,
- * as in force since 2020), the exempt Sundays are:
+ * as amended by the December 2024 act signed Dec 24 2024 and in force
+ * from 2025), the exempt Sundays are:
  *  - the last Sunday of January, April, June and August
  *  - the Sunday directly before Easter (Palm Sunday)
- *  - the two Sundays directly before Christmas Day (Dec 25)
+ *  - the THREE Sundays directly before Christmas Day (Dec 25)
+ *
+ * The 2024 amendment added the third pre-Christmas Sunday; before 2025
+ * only two pre-Christmas Sundays were exempt. The bikepacking planner
+ * is for future trips so it computes the post-amendment rule
+ * unconditionally — historical accuracy for 2018-2024 trips is not a
+ * goal.
  *
  * Computed algorithmically so the calendar never goes stale. If the law
  * changes, only the rule list below needs updating.
@@ -55,14 +62,15 @@ function addDays(d: Date, days: number): Date {
 export function tradingSundaysFor(year: number): string[] {
   const palmSunday = addDays(easterSunday(year), -7);
 
-  // The two Sundays directly preceding Christmas Day (Dec 25)
+  // The three Sundays directly preceding Christmas Day (Dec 25), per the
+  // 2024 amendment (signed Dec 24 2024, effective 2025).
   const christmas = new Date(Date.UTC(year, 11, 25));
   const offsetToSunday = christmas.getUTCDay() === 0 ? 7 : christmas.getUTCDay();
   const sundayBeforeChristmas = addDays(christmas, -offsetToSunday);
 
   // Palm Sunday falls Mar 15 – Apr 18 (Easter is Mar 22 – Apr 25); it never
   // collides with the other rules' ranges (last Sunday of Jan/Apr/Jun/Aug,
-  // two Sundays before Dec 25), so the list below is already unique and
+  // three Sundays before Dec 25), so the list below is already unique and
   // chronological — no dedupe/sort needed.
   return [
     lastSundayOf(year, 1),
@@ -70,6 +78,7 @@ export function tradingSundaysFor(year: number): string[] {
     lastSundayOf(year, 4),
     lastSundayOf(year, 6),
     lastSundayOf(year, 8),
+    addDays(sundayBeforeChristmas, -14),
     addDays(sundayBeforeChristmas, -7),
     sundayBeforeChristmas,
   ].map(toDateStr);
