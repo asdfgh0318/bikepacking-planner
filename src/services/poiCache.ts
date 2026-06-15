@@ -3,7 +3,7 @@ import { POI_CACHE_TTL_MS, INPOST_CACHE_TTL_MS } from '../config';
 import { debugLog } from '../utils/debugLogger';
 import type { SupplyPoint } from '../types';
 
-const SQL_WASM_URL = '/sql-wasm.wasm';
+const SQL_WASM_URL = `${import.meta.env.BASE_URL}sql-wasm.wasm`;
 const IDB_NAME = 'bikepacking-poi-cache';
 const IDB_STORE = 'sqlite';
 

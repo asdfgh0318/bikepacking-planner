@@ -23,3 +23,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# App-generated debug exports
+bikepacking-debug-*.csv
+*.pdf

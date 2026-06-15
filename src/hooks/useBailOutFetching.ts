@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { getOrFetchBailOutPOIs } from '../services/cacheManager';
@@ -18,22 +18,20 @@ export function useBailOutFetching(): void {
   const showBailOut = useSupplyStore((s) => s.showBailOut);
   const setBailOutPoints = useSupplyStore((s) => s.setBailOutPoints);
 
-  const versionRef = useRef(0);
-
   useEffect(() => {
     if (!routeGeometry || !showBailOut) {
       setBailOutPoints([]);
       return;
     }
 
-    const version = ++versionRef.current;
+    let cancelled = false;
 
     async function loadBailOut() {
       try {
         // cacheManager handles: cache check, Overpass fetch, classification,
         // distanceFromStartKm calculation, sorting, and caching results.
         const points = await getOrFetchBailOutPOIs(routeGeometry!, corridorWidthKm);
-        if (version !== versionRef.current) return;
+        if (cancelled) return;
 
         setBailOutPoints(points);
         debugLog.info('bailout', 'points:loaded', { total: points.length });
@@ -44,6 +42,6 @@ export function useBailOutFetching(): void {
     }
 
     loadBailOut();
-    return () => { versionRef.current++; };
+    return () => { cancelled = true; };
   }, [routeGeometry, showBailOut, corridorWidthKm, setBailOutPoints]);
 }

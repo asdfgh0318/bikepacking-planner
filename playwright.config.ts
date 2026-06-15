@@ -3,16 +3,18 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 30000,
+  retries: process.env.CI ? 2 : 0,
   use: {
-    baseURL: 'http://localhost:5173',
+    // Dedicated port so we never attach to another project's dev server on 5173
+    baseURL: 'http://localhost:5183',
     screenshot: 'on',
     headless: true,
   },
   webServer: {
-    command: 'npm run dev',
-    port: 5173,
-    reuseExistingServer: true,
-    timeout: 10000,
+    command: 'npm run dev -- --port 5183 --strictPort',
+    port: 5183,
+    reuseExistingServer: false,
+    timeout: 30000,
   },
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },

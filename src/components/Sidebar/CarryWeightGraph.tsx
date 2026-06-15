@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import type { UnifiedShoppingPlan } from '../../types';
 
 // SVG dimensions (constant)
@@ -12,47 +12,42 @@ export const CarryWeightGraph = memo(function CarryWeightGraph({ plan }: { plan:
   const curve = plan.resupply.carryWeightCurve;
   if (curve.length < 2) return null;
 
-  const derived = useMemo(() => {
-    const totalDist = curve[curve.length - 1].distanceKm;
-    const rawMax = Math.max(...curve.map((p) => p.foodWeightG));
-    const maxWeight = rawMax > 0 ? Math.ceil(rawMax / 500) * 500 : 3000;
+  // memo() on the component already skips recomputation unless `plan` changes
+  const totalDist = curve[curve.length - 1].distanceKm;
+  const rawMax = Math.max(...curve.map((p) => p.foodWeightG));
+  const maxWeight = rawMax > 0 ? Math.ceil(rawMax / 500) * 500 : 3000;
 
-    const toX = (d: number) => PAD.left + (d / totalDist) * CHART_W;
-    const toY = (wt: number) => PAD.top + CHART_H - (wt / maxWeight) * CHART_H;
+  const toX = (d: number) => PAD.left + (d / totalDist) * CHART_W;
+  const toY = (wt: number) => PAD.top + CHART_H - (wt / maxWeight) * CHART_H;
 
-    const linePath = curve
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.foodWeightG).toFixed(1)}`)
-      .join(' ');
+  const linePath = curve
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.distanceKm).toFixed(1)},${toY(p.foodWeightG).toFixed(1)}`)
+    .join(' ');
 
-    const areaPath =
-      linePath +
-      ` L${toX(totalDist).toFixed(1)},${(PAD.top + CHART_H).toFixed(1)}` +
-      ` L${PAD.left},${(PAD.top + CHART_H).toFixed(1)} Z`;
+  const areaPath =
+    linePath +
+    ` L${toX(totalDist).toFixed(1)},${(PAD.top + CHART_H).toFixed(1)}` +
+    ` L${PAD.left},${(PAD.top + CHART_H).toFixed(1)} Z`;
 
-    const zoneStep = maxWeight <= 1500 ? 500 : 1000;
-    const zones: { weight: number; label: string }[] = [];
-    for (let wt = zoneStep; wt < maxWeight; wt += zoneStep) {
-      zones.push({
-        weight: wt,
-        label: wt >= 1000 ? `${(wt / 1000).toFixed(wt % 1000 === 0 ? 0 : 1)} kg` : `${wt}g`,
-      });
+  const zoneStep = maxWeight <= 1500 ? 500 : 1000;
+  const zones: { weight: number; label: string }[] = [];
+  for (let wt = zoneStep; wt < maxWeight; wt += zoneStep) {
+    zones.push({
+      weight: wt,
+      label: wt >= 1000 ? `${(wt / 1000).toFixed(wt % 1000 === 0 ? 0 : 1)} kg` : `${wt}g`,
+    });
+  }
+
+  const dayBreaks: number[] = [];
+  for (let i = 1; i < curve.length; i++) {
+    if (curve[i].dayNumber !== curve[i - 1].dayNumber) {
+      dayBreaks.push(curve[i].distanceKm);
     }
+  }
 
-    const dayBreaks: number[] = [];
-    for (let i = 1; i < curve.length; i++) {
-      if (curve[i].dayNumber !== curve[i - 1].dayNumber) {
-        dayBreaks.push(curve[i].distanceKm);
-      }
-    }
-
-    const purchaseDots = curve.filter(
-      (p, i) => i > 0 && p.foodWeightG > curve[i - 1].foodWeightG + 50,
-    );
-
-    return { totalDist, maxWeight, linePath, areaPath, zones, dayBreaks, purchaseDots, toX, toY };
-  }, [curve]);
-
-  const { totalDist, maxWeight, linePath, areaPath, zones, dayBreaks, purchaseDots, toX, toY } = derived;
+  const purchaseDots = curve.filter(
+    (p, i) => i > 0 && p.foodWeightG > curve[i - 1].foodWeightG + 50,
+  );
 
   return (
     <div className="weight-graph">

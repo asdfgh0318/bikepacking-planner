@@ -68,12 +68,12 @@ export function parseOpeningHours(raw: string): ParsedSchedule | null {
 
   for (const part of parts) {
     // Skip keyword-only entries like "Tu closed", "Mo open", "PH off"
-    if (/^[A-Za-z,\-]+\s+(open|closed|off)$/i.test(part)) continue;
+    if (/^[A-Za-z,-]+\s+(open|closed|off)$/i.test(part)) continue;
 
     // Match "Mo-Fr 06:00-22:00" or "Sa 07:00-21:00" or "Mo,We,Fr 08:00-16:00"
     // Also handles comma-separated time ranges: "Mo-Fr 09:00-13:00,15:00-21:00"
     const match = part.match(
-      /^([A-Za-z,\-]+)\s+([\d:,\-\s]+)$/
+      /^([A-Za-z,-]+)\s+([\d:,\s-]+)$/
     );
     if (!match) return null;
 

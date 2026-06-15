@@ -30,17 +30,16 @@ export function useMountainPasses(): void {
       // Compute distance along route for each pass and filter by proximity
       const withDistance = passes
         .map(p => ({
-          ...p,
-          distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, p.lat, p.lng),
-          _distToRoute: getDistanceToRoute(routeGeometry!, p.lat, p.lng),
+          pass: { ...p, distanceFromStartKm: getDistanceAlongRoute(routeGeometry!, p.lat, p.lng) },
+          distToRoute: getDistanceToRoute(routeGeometry!, p.lat, p.lng),
         }))
-        .filter(p =>
-          p._distToRoute <= MAX_DISTANCE_FROM_ROUTE_KM &&
-          p.distanceFromStartKm > 0.5 && // not at very start
-          p.distanceFromStartKm < routeLengthKm - 0.5 // not at very end
+        .filter(({ pass, distToRoute }) =>
+          distToRoute <= MAX_DISTANCE_FROM_ROUTE_KM &&
+          pass.distanceFromStartKm > 0.5 && // not at very start
+          pass.distanceFromStartKm < routeLengthKm - 0.5 // not at very end
         )
-        .sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm)
-        .map(({ _distToRoute, ...rest }) => rest); // strip internal field
+        .sort((a, b) => a.pass.distanceFromStartKm - b.pass.distanceFromStartKm)
+        .map(({ pass }) => pass);
 
       // Limit to top 15 to avoid clutter
       const result = withDistance.slice(0, 15);
