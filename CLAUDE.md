@@ -36,11 +36,13 @@ npm run build -- --base=/bikepacking-planner/   # build exactly as deployed
   from `src/utils/date.ts` (pure UTC) for all date arithmetic — do not write
   new `new Date(str + 'T00:00:00')` helpers; that class of bug was already
   consolidated away once.
-- Polish trading-Sunday law — the exempt-Sunday calendar (statutory rule +
-  Easter computus) and the law-dependent chain lists (`SUNDAY_CLOSED_TYPES`,
-  `SUNDAY_REDUCED_HOURS_TYPES`) both live in `src/data/sundayTrading.ts`.
-  Never reintroduce hardcoded date lists, and keep new law-dependent
-  retailer facts in that module.
+- Polish trading-Sunday law lives in `src/data/sundayTrading.ts`: the
+  exempt-Sunday calendar (statutory rule + Easter computus) and the
+  `isClosedOnNonTradingSunday(stop)` predicate. Never reintroduce
+  hardcoded date lists. New corporate large-format chains belong in the
+  `BRAND_REGISTRY` in `src/services/poiClassifier.ts` with
+  `closedOnNonTradingSunday: true` — that's where the per-store flag
+  the predicate reads is set.
 - `daySegments` must stay derivable from the route alone — supply points only
   refine day-end placement (`useDaySplitting` hook). Don't make Overpass a
   prerequisite for the trip plan again; Overpass rate-limits routinely (429s).

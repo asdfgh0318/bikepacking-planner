@@ -18,7 +18,7 @@ import { isOpenAt } from '../utils/openingHours';
 import { tripDayDate } from '../utils/date';
 import {
   isTradingSunday,
-  SUNDAY_CLOSED_TYPES,
+  isClosedOnNonTradingSunday,
   SUNDAY_REDUCED_HOURS_TYPES,
 } from '../data/sundayTrading';
 import {
@@ -208,8 +208,11 @@ function rankStops(
     const arrivalHour = estimateArrivalHour(seg.startKm, stop.distanceFromStartKm, config.rideStartHour, config.avgSpeedKmh);
     const isOpen = stop.details?.is24h ? true : isOpenAt(stop.details?.openingHours, arrivalHour, dayOfWeek);
 
-    // On non-trading Sundays: skip Biedronka entirely (Polish Sunday trading ban for large retailers)
-    if (isSunday && !isTradingDay && !stop.details?.is24h && SUNDAY_CLOSED_TYPES.includes(stop.type)) {
+    // On non-trading Sundays: skip every chain forced shut by the Polish
+    // trading ban (Biedronka, Lidl, Aldi, Auchan, Kaufland, Carrefour, Dino,
+    // Netto, Intermarché, Stokrotka, Polomarket — all corporate large-format).
+    // isClosedOnNonTradingSunday encodes the law.
+    if (isSunday && !isTradingDay && !stop.details?.is24h && isClosedOnNonTradingSunday(stop)) {
       continue;
     }
 
