@@ -10,21 +10,38 @@ export interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-/** Polish retail chain wikidata IDs → app type + display name */
-const BRAND_REGISTRY: Record<string, { type: SupplyPoint['type']; name: string }> = {
+/**
+ * Polish retail chain wikidata IDs → app type + display name.
+ *
+ * `closedOnNonTradingSunday` marks chains subject to the Sunday
+ * trading ban (ustawa o ograniczeniu handlu w niedziele). Per 2026
+ * industry coverage, the dominant corporate large-format chains
+ * (Biedronka, Lidl, Aldi, Auchan, Kaufland, Carrefour, Dino, Netto,
+ * Intermarché, Stokrotka, Polomarket) are all closed on non-trading
+ * Sundays. Franchise/owner-operated chains (Żabka, Lewiatan) stay
+ * open via the franchise exemption — Lewiatan also runs many DHL
+ * Parcel pickup points which exempts those locations under the
+ * postal-services carve-out.
+ */
+const BRAND_REGISTRY: Record<string, {
+  type: SupplyPoint['type'];
+  name: string;
+  closedOnNonTradingSunday?: boolean;
+}> = {
   'Q2874810': { type: 'zabka', name: 'Żabka' },
-  'Q857855': { type: 'biedronka', name: 'Biedronka' },
-  'Q111': { type: 'supermarket', name: 'Lidl' },
-  'Q685967': { type: 'supermarket', name: 'Auchan' },
-  'Q487494': { type: 'supermarket', name: 'Kaufland' },
-  'Q2462707': { type: 'supermarket', name: 'Dino' },
-  'Q11790298': { type: 'supermarket', name: 'Netto' },
-  'Q1543186': { type: 'supermarket', name: 'Lewiatan' },
-  'Q11790849': { type: 'supermarket', name: 'Stokrotka' },
-  'Q7899': { type: 'supermarket', name: 'Carrefour' },
-  'Q110079': { type: 'supermarket', name: 'Lidl' },  // alternate wikidata ID
-  'Q152096': { type: 'supermarket', name: 'Aldi' },
-  'Q316004': { type: 'supermarket', name: 'Intermarché' },
+  'Q857855': { type: 'biedronka', name: 'Biedronka', closedOnNonTradingSunday: true },
+  'Q111': { type: 'supermarket', name: 'Lidl', closedOnNonTradingSunday: true },
+  'Q685967': { type: 'supermarket', name: 'Auchan', closedOnNonTradingSunday: true },
+  'Q487494': { type: 'supermarket', name: 'Kaufland', closedOnNonTradingSunday: true },
+  'Q2462707': { type: 'supermarket', name: 'Dino', closedOnNonTradingSunday: true },
+  'Q11790298': { type: 'supermarket', name: 'Netto', closedOnNonTradingSunday: true },
+  'Q1543186': { type: 'supermarket', name: 'Lewiatan' }, // franchise — exempt
+  'Q11790849': { type: 'supermarket', name: 'Stokrotka', closedOnNonTradingSunday: true },
+  'Q11821937': { type: 'supermarket', name: 'Polomarket', closedOnNonTradingSunday: true },
+  'Q7899': { type: 'supermarket', name: 'Carrefour', closedOnNonTradingSunday: true },
+  'Q110079': { type: 'supermarket', name: 'Lidl', closedOnNonTradingSunday: true }, // alternate wikidata ID
+  'Q152096': { type: 'supermarket', name: 'Aldi', closedOnNonTradingSunday: true },
+  'Q316004': { type: 'supermarket', name: 'Intermarché', closedOnNonTradingSunday: true },
 };
 
 /**
@@ -62,7 +79,11 @@ const RULES: ClassificationRule[] = [
       return {
         type: brand.type,
         name: tags.name || brand.name,
-        details: { ...extractCommonDetails(tags), brand: brand.name },
+        details: {
+          ...extractCommonDetails(tags),
+          brand: brand.name,
+          ...(brand.closedOnNonTradingSunday && { closedOnNonTradingSunday: true }),
+        },
       };
     },
   },

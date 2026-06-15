@@ -466,6 +466,52 @@ describe('generateResupplyPlan', () => {
       expect(plan.purchases.length).toBeGreaterThanOrEqual(1);
       expect(plan.purchases[0].stopType).toBe('zabka');
     });
+
+    it('skips Lidl on Sunday via brand flag (typed supermarket)', () => {
+      // Lidl/Aldi/Kaufland classify as type='supermarket' and rely on
+      // details.closedOnNonTradingSunday — the same large-format ban
+      // that closes Biedronka must close them too.
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('lidl', 30, 'supermarket', {
+          details: { brand: 'Lidl', closedOnNonTradingSunday: true },
+        }),
+        makeSupplyPoint('zab', 35, 'zabka'),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-07-12', // non-trading Sunday
+      });
+
+      const plan = generateResupplyPlan(standardProfile, days, supplyPoints, [], config);
+
+      expect(plan.purchases.find((p) => p.stopType === 'supermarket')).toBeUndefined();
+      expect(plan.purchases.find((p) => p.stopType === 'zabka')).toBeDefined();
+    });
+
+    it('keeps untagged generic supermarkets open on Sunday', () => {
+      // A shop=supermarket without brand:wikidata is treated as exempt —
+      // we won't fire a Sunday closure on something we can't positively
+      // identify as a covered chain.
+      const days = [
+        makeDaySegment({ dayNumber: 1, startKm: 0, endKm: 80 }),
+      ];
+      const supplyPoints = [
+        makeSupplyPoint('generic', 30, 'supermarket', {
+          details: { brand: 'Local Sklep' },
+        }),
+      ];
+
+      const config = makeConfig({
+        tripStartDate: '2026-07-12', // non-trading Sunday
+      });
+
+      const plan = generateResupplyPlan(standardProfile, days, supplyPoints, [], config);
+
+      expect(plan.purchases.find((p) => p.stopType === 'supermarket')).toBeDefined();
+    });
   });
 
   // ─── Trading Sunday Exceptions ──────────────────────────────────────
