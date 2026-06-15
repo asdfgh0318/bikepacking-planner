@@ -36,7 +36,29 @@ interface RouteState {
 
 let nextId = 1;
 
-export const useRouteStore = create<RouteState>((set) => ({
+/**
+ * Structural equality for day segments. The day splitter re-runs whenever
+ * supply points refresh and always returns fresh arrays; without this check
+ * every refresh would propagate an identical-but-new array to subscribers
+ * (aborting in-flight weather fetches, re-arming plan regeneration).
+ * Boundaries imply the derived fields (coords, elevation, hours), but
+ * supplyStops/nightStop change independently, so they're compared too.
+ */
+function daySegmentsEqual(a: DaySegment[], b: DaySegment[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((s, i) => {
+    const t = b[i];
+    return (
+      s.startKm === t.startKm &&
+      s.endKm === t.endKm &&
+      s.nightStop?.distanceFromStartKm === t.nightStop?.distanceFromStartKm &&
+      s.supplyStops.length === t.supplyStops.length &&
+      s.supplyStops.every((sp, j) => sp.id === t.supplyStops[j].id)
+    );
+  });
+}
+
+export const useRouteStore = create<RouteState>((set, get) => ({
   waypoints: [],
   routeGeometry: null,
   routeStats: null,
@@ -70,7 +92,10 @@ export const useRouteStore = create<RouteState>((set) => ({
   setRouteStats: (stats) => set({ routeStats: stats }),
   setIsCalculating: (v) => set({ isCalculating: v }),
   setWaypoints: (wps) => set({ waypoints: wps }),
-  setDaySegments: (segs) => set({ daySegments: segs }),
+  setDaySegments: (segs) => {
+    if (daySegmentsEqual(get().daySegments, segs)) return;
+    set({ daySegments: segs });
+  },
   setDailyTargetKm: (km) => set({ dailyTargetKm: Math.max(20, Math.min(300, km)) }),
   setRoutingProfile: (p) => set({ routingProfile: p }),
   setGpxGeometryLoaded: (v) => set({ gpxGeometryLoaded: v }),

@@ -8,6 +8,7 @@ import { useRouteStore } from './store/routeStore';
 import { useSettingsStore } from './store/settingsStore';
 import { decodeRouteFromHash } from './services/routeStorage';
 import { useRouteCalculation } from './hooks/useRouteCalculation';
+import { useDaySplitting } from './hooks/useDaySplitting';
 import { useSupplyPointFetching } from './hooks/useSupplyPointFetching';
 import { useSurfaceFetching } from './hooks/useSurfaceFetching';
 import { useWeatherFetching } from './hooks/useWeatherFetching';
@@ -39,6 +40,10 @@ function App() {
 
   // Route calculation with debounce
   useRouteCalculation();
+
+  // Split the route into daily segments — independent of supply data so
+  // Weather/Shop/Resupply work even when Overpass is unreachable
+  useDaySplitting();
 
   // Fetch supply points (shops, water, campsites, paczkomaty, repair)
   useSupplyPointFetching();

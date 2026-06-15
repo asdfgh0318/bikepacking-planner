@@ -4,7 +4,6 @@ import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { fetchPaczkomaty } from '../services/inpost';
 import { getOrFetchSupplyPOIs } from '../services/cacheManager';
-import { splitRouteIntoDays } from '../services/daySplitter';
 import { analyzeSupplyGaps, analyzeWaterGaps, enrichGapsWithSuggestions } from '../services/gapAnalysis';
 import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from '../utils/geo';
 import { debugLog } from '../utils/debugLogger';
@@ -25,8 +24,6 @@ import type { SupplyPoint } from '../types';
  */
 export function useSupplyPointFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
-  const dailyTargetKm = useRouteStore((s) => s.dailyTargetKm);
-  const setDaySegments = useRouteStore((s) => s.setDaySegments);
 
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
   const setSupplyPoints = useSupplyStore((s) => s.setSupplyPoints);
@@ -140,13 +137,8 @@ export function useSupplyPointFetching(): void {
             gapsWithAlternatives: gaps.filter(g => g.alternatives && g.alternatives.length > 0).length,
           });
 
-          // Auto-calculate day segments
-          if (routeGeometry) {
-            const routingProfile = useRouteStore.getState().routingProfile;
-            const segments = splitRouteIntoDays(routeGeometry, dailyTargetKm, supplyPoints, routingProfile);
-            setDaySegments(segments);
-            debugLog.info('route', 'days:split', { dayCount: segments.length, dailyTargetKm });
-          }
+          // useDaySplitting re-runs automatically once supplyPoints changes,
+          // so day-end alignment with shops/campsites is picked up here.
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -161,5 +153,5 @@ export function useSupplyPointFetching(): void {
 
     loadSupplyPoints();
     return () => { controller.abort(); };
-  }, [routeGeometry, corridorWidthKm, dailyTargetKm, setSupplyPoints, setIsLoading, setDaySegments, setSupplyGaps, setWaterGaps]);
+  }, [routeGeometry, corridorWidthKm, setSupplyPoints, setIsLoading, setSupplyGaps, setWaterGaps]);
 }
