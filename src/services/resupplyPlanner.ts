@@ -16,7 +16,11 @@ import { FOOD_DB, calculateDailyCalories } from './diet';
 import { FOOD_TYPES } from './gapAnalysis';
 import { isOpenAt } from '../utils/openingHours';
 import { tripDayDate } from '../utils/date';
-import { isTradingSunday } from '../data/sundayTrading';
+import {
+  isTradingSunday,
+  SUNDAY_CLOSED_TYPES,
+  SUNDAY_REDUCED_HOURS_TYPES,
+} from '../data/sundayTrading';
 import {
   SUNDAY_FOOD_BUFFER,
   DANGER_GAP_LOOKAHEAD_KM,
@@ -135,12 +139,6 @@ function getDayOfWeek(tripStartDate: string | undefined, dayNumber: number): num
   start.setDate(start.getDate() + dayNumber - 1);
   return start.getDay(); // 0=Sunday
 }
-
-// Polish Sunday trading ban: Biedronka (large retailer) always closed.
-// Generic 'shop' removed — small/owner-operated shops may be open on Sundays.
-// Żabka is a franchise (owner-operated) so it's open Sundays, typically reduced hours.
-const SUNDAY_CLOSED_TYPES = ['biedronka'];
-const SUNDAY_REDUCED_HOURS_TYPES = ['zabka']; // open but ~10:00-18:00 on Sundays
 
 /**
  * Select food items for a stop, prioritizing items available at this store type.

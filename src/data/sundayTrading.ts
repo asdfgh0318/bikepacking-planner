@@ -51,7 +51,7 @@ function addDays(d: Date, days: number): Date {
   return copy;
 }
 
-/** All trading Sundays for a year, as YYYY-MM-DD strings. */
+/** All trading Sundays for a year, as YYYY-MM-DD strings, in chronological order. */
 export function tradingSundaysFor(year: number): string[] {
   const palmSunday = addDays(easterSunday(year), -7);
 
@@ -60,7 +60,11 @@ export function tradingSundaysFor(year: number): string[] {
   const offsetToSunday = christmas.getUTCDay() === 0 ? 7 : christmas.getUTCDay();
   const sundayBeforeChristmas = addDays(christmas, -offsetToSunday);
 
-  const dates = [
+  // Palm Sunday falls Mar 15 – Apr 18 (Easter is Mar 22 – Apr 25); it never
+  // collides with the other rules' ranges (last Sunday of Jan/Apr/Jun/Aug,
+  // two Sundays before Dec 25), so the list below is already unique and
+  // chronological — no dedupe/sort needed.
+  return [
     lastSundayOf(year, 1),
     palmSunday,
     lastSundayOf(year, 4),
@@ -68,13 +72,30 @@ export function tradingSundaysFor(year: number): string[] {
     lastSundayOf(year, 8),
     addDays(sundayBeforeChristmas, -7),
     sundayBeforeChristmas,
-  ];
-  // Palm Sunday can coincide with the last Sunday of March/April edge cases;
-  // dedupe and keep chronological order.
-  return [...new Set(dates.map(toDateStr))].sort();
+  ].map(toDateStr);
 }
 
 const cache = new Map<number, ReadonlySet<string>>();
+
+/**
+ * Retail chains that the trading-restriction act forces shut on
+ * non-trading Sundays. Large-format retailers operated as corporate
+ * stores (not franchises) — Biedronka being the dominant example —
+ * are subject to the ban regardless of opening_hours tags.
+ *
+ * Per-shop OSM tags ("biedronka", "zabka") drive the lookup, so the
+ * planner can identify chains even when the underlying classification
+ * (`shop=supermarket`/`shop=convenience`) is generic.
+ */
+export const SUNDAY_CLOSED_TYPES: readonly string[] = ['biedronka'];
+
+/**
+ * Retail chains that operate on non-trading Sundays but with reduced
+ * hours, typically because they're franchise-operated (the owner is
+ * exempt from the trading ban). Żabka franchises usually run ~10:00–18:00
+ * instead of their full weekday hours.
+ */
+export const SUNDAY_REDUCED_HOURS_TYPES: readonly string[] = ['zabka'];
 
 /**
  * Check whether a given date (YYYY-MM-DD) falls on a Polish trading Sunday.
