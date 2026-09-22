@@ -55,6 +55,13 @@ npm run build -- --base=/bikepacking-planner/   # build exactly as deployed
   GrapheneOS) runs WASM without JIT, so the POI cache is plain IndexedDB
   (`src/services/poiCache.ts`). Don't bring sql.js or other WASM back.
 - PWA manifest URLs are relative so the app works under the Pages base path.
+  Icons are PNG (Vanadium installs SVG-only manifests as bookmarks); regenerate
+  with `npm run icons` after editing `public/icon-192.svg`.
+- Route, trip settings, layer toggles and diet persist in localStorage (Zustand
+  `persist`). Derived data (day segments, POIs, weather, plan) is recomputed on
+  load. `gpxGeometryLoaded` means "geometry is authoritative, skip BRouter";
+  it is set by GPX import and by restore, and cleared by every user edit in
+  `routeStore` — never reset it inside the calculation hook again.
 - `useAutoPlan` regenerates the resupply plan whenever its inputs change and
   is the single place that resolves the 'auto' strategy; the Generate button
   calls the same `buildPlanFromStores`. `debugLog` prints to the console in

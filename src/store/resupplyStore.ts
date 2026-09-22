@@ -1,7 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { PaczkomatConfig, ResupplyStrategy, ResupplyStrategyId, UnifiedShoppingPlan, TripContext, Season, RouteWeather } from '../types';
 import type { WaterPlan } from '../services/waterPlanner';
 import { RESUPPLY_PRESETS } from '../services/resupplyPlanner';
+import { todayLocal } from '../utils/date';
 
 // Season defaults (Poland, ~52°N latitude)
 const SEASON_DEFAULTS: Record<Season, Omit<TripContext, 'season'>> = {
@@ -49,19 +51,19 @@ interface ResupplyState {
   setWaterPlan: (p: WaterPlan | null) => void;
 }
 
-export const useResupplyStore = create<ResupplyState>((set) => ({
+export const useResupplyStore = create<ResupplyState>()(persist((set) => ({
   enablePaczkomatShipping: false,
   paczkomatConfig: {
     intervalDays: 3,
     prefer24h: true,
     preferNearNightStop: true,
-    tripStartDate: new Date().toISOString().split('T')[0],
+    tripStartDate: todayLocal(),
     leadTimeDays: 2,
   },
   resupplyConfig: {
     rideStartHour: 7,
     avgSpeedKmh: 15,
-    tripStartDate: new Date().toISOString().split('T')[0],
+    tripStartDate: todayLocal(),
   },
   strategyId: 'auto',
   strategy: { ...RESUPPLY_PRESETS['auto'] },
@@ -104,4 +106,17 @@ export const useResupplyStore = create<ResupplyState>((set) => ({
   setActiveView: (v) => set({ activeView: v }),
   setWaterCapacityL: (v) => set({ waterCapacityL: Math.max(0.5, Math.min(5.0, v)) }),
   setWaterPlan: (p) => set({ waterPlan: p }),
+}), {
+  name: 'bikepacking-trip',
+  // Settings only; the plan, weather and water plan are regenerated.
+  partialize: (s) => ({
+    enablePaczkomatShipping: s.enablePaczkomatShipping,
+    paczkomatConfig: s.paczkomatConfig,
+    resupplyConfig: s.resupplyConfig,
+    strategyId: s.strategyId,
+    strategy: s.strategy,
+    tripContext: s.tripContext,
+    showWeatherMarkers: s.showWeatherMarkers,
+    waterCapacityL: s.waterCapacityL,
+  }),
 }));

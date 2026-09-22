@@ -1,4 +1,5 @@
 import type { RouteStats, RoutingProfile } from '../types';
+import { lineStats } from '../utils/geo';
 import { fetchWithRetry } from '../utils/fetchWithRetry';
 import { BROUTER_TIMEOUT_MS } from '../config';
 
@@ -47,10 +48,13 @@ export async function calculateRoute(
   const data: BRouterResponse = await res.json();
   const feature = data.features[0];
 
+  // BRouter's GeoJSON exposes 'track-length' and 'filtered ascend' but no
+  // descent, so climb figures come from the elevation in the geometry itself.
+  const fromGeometry = lineStats(feature.geometry.coordinates);
   const stats: RouteStats = {
-    distanceKm: Number(feature.properties['track-length'] || 0) / 1000,
-    ascentM: Number(feature.properties['total-ascend'] || 0),
-    descentM: Number(feature.properties['total-descend'] || 0),
+    distanceKm: Number(feature.properties['track-length'] || 0) / 1000 || fromGeometry.distanceKm,
+    ascentM: fromGeometry.ascentM,
+    descentM: fromGeometry.descentM,
   };
 
   return { geometry: feature.geometry, stats };

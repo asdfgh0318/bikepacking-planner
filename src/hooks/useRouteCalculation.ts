@@ -19,7 +19,6 @@ export function useRouteCalculation(): void {
   const setIsCalculating = useRouteStore((s) => s.setIsCalculating);
   const setSupplyPoints = useSupplyStore((s) => s.setSupplyPoints);
   const gpxGeometryLoaded = useRouteStore((s) => s.gpxGeometryLoaded);
-  const setGpxGeometryLoaded = useRouteStore((s) => s.setGpxGeometryLoaded);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -32,10 +31,10 @@ export function useRouteCalculation(): void {
       return;
     }
 
-    // Skip BRouter recalculation when GPX already provided full geometry
+    // Geometry came from a GPX file or was restored from storage: keep it.
+    // The store clears the flag when the user edits waypoints or the profile.
     if (gpxGeometryLoaded) {
-      debugLog.info('route', 'calc:skip', 'GPX geometry already loaded, skipping BRouter');
-      setGpxGeometryLoaded(false);
+      debugLog.info('route', 'calc:skip', 'geometry already loaded, skipping BRouter');
       return;
     }
 
@@ -71,5 +70,5 @@ export function useRouteCalculation(): void {
       clearTimeout(debounceRef.current);
       controller.abort();
     };
-  }, [waypoints, routingProfile, gpxGeometryLoaded, setGpxGeometryLoaded, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
+  }, [waypoints, routingProfile, gpxGeometryLoaded, setRouteGeometry, setRouteStats, setIsCalculating, setSupplyPoints]);
 }

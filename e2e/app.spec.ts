@@ -50,6 +50,21 @@ test.describe('Bikepacking Planner', () => {
     await expect(page.locator('.waypoint-item')).toHaveCount(2, { timeout: 5000 });
   });
 
+  test('route survives a reload', async ({ page }) => {
+    const canvas = page.locator('canvas.maplibregl-canvas');
+    await expect(canvas).toBeVisible({ timeout: 10000 });
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('Canvas not found');
+
+    await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.4);
+    await page.waitForTimeout(300);
+    await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.6);
+    await expect(page.locator('.waypoint-item')).toHaveCount(2, { timeout: 5000 });
+
+    await page.reload();
+    await expect(page.locator('.waypoint-item')).toHaveCount(2, { timeout: 10000 });
+  });
+
   test('routing profile selector works', async ({ page }) => {
     const canvas = page.locator('canvas.maplibregl-canvas');
     await expect(canvas).toBeVisible({ timeout: 10000 });

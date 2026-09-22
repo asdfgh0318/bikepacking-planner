@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { SupplyPoint, SupplyGap } from '../types';
 
 interface SupplyState {
@@ -39,7 +40,7 @@ interface SupplyState {
   setIsLoading: (v: boolean) => void;
 }
 
-export const useSupplyStore = create<SupplyState>((set) => ({
+export const useSupplyStore = create<SupplyState>()(persist((set) => ({
   supplyPoints: [],
   supplyGaps: [],
   waterGaps: [],
@@ -75,4 +76,13 @@ export const useSupplyStore = create<SupplyState>((set) => ({
   setShowHalts: (v) => set({ showHalts: v }),
   setBailOutPoints: (pts) => set({ bailOutPoints: pts }),
   setIsLoading: (v) => set({ isLoading: v }),
+}), {
+  name: 'bikepacking-supply',
+  partialize: (s) => ({
+    corridorWidthKm: s.corridorWidthKm,
+    showPaczkomaty: s.showPaczkomaty, showShops: s.showShops, showWater: s.showWater,
+    showCampsites: s.showCampsites, showRepair: s.showRepair, showBailOut: s.showBailOut,
+    showFuel: s.showFuel, showFood: s.showFood, showPharmacy: s.showPharmacy,
+    showToilets: s.showToilets, showHalts: s.showHalts,
+  }),
 }));

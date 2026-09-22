@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { DietType, SupplyOrder } from '../types';
 
 interface DietState {
@@ -13,7 +14,7 @@ interface DietState {
   setIsPlanning: (v: boolean) => void;
 }
 
-export const useDietStore = create<DietState>((set) => ({
+export const useDietStore = create<DietState>()(persist((set) => ({
   selectedDiet: 'standard',
   rideDays: 2,
   orders: [],
@@ -23,4 +24,7 @@ export const useDietStore = create<DietState>((set) => ({
   setRideDays: (d) => set({ rideDays: d }),
   setOrders: (o) => set({ orders: o }),
   setIsPlanning: (v) => set({ isPlanning: v }),
+}), {
+  name: 'bikepacking-diet',
+  partialize: (s) => ({ selectedDiet: s.selectedDiet, rideDays: s.rideDays }),
 }));

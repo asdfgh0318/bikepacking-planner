@@ -58,3 +58,12 @@ describe('tripDayDate', () => {
     expect(tripDayDate('not-a-date', 1)).toBe(null);
   });
 });
+
+describe('todayLocal', () => {
+  it('uses the local calendar day, not UTC', async () => {
+    const { todayLocal } = await import('./date');
+    // 23:30 local on the 22nd; in any zone east of UTC the UTC date may differ
+    const d = new Date(2026, 8, 22, 23, 30);
+    expect(todayLocal(d)).toBe('2026-09-22');
+  });
+});

@@ -2,8 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
+import { lineStats } from '../../utils/geo';
 import { parseGPX, readFileAsText } from '../../utils/gpx';
-import { distanceKm } from '../../utils/distance';
 
 export function GPXImport() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
@@ -25,21 +25,7 @@ export function GPXImport() {
         if (geometry) {
           setGpxGeometryLoaded(true);
           setRouteGeometry(geometry);
-          const coords = geometry.coordinates;
-          let dist = 0;
-          let ascent = 0;
-          let descent = 0;
-          for (let i = 1; i < coords.length; i++) {
-            const [lng1, lat1, z1] = coords[i - 1];
-            const [lng2, lat2, z2] = coords[i];
-            dist += distanceKm(lat1, lng1, lat2, lng2);
-            if (z1 != null && z2 != null) {
-              const diff = z2 - z1;
-              if (diff > 0) ascent += diff;
-              else descent += Math.abs(diff);
-            }
-          }
-          setRouteStats({ distanceKm: dist, ascentM: ascent, descentM: descent });
+          setRouteStats(lineStats(geometry.coordinates));
         }
         toast.success('GPX imported', { description: `${waypoints.length} waypoints loaded` });
       } catch {
