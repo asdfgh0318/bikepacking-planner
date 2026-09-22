@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { Waypoint, RouteStats, DaySegment, RoutingProfile } from '../types';
 import type { SurfaceSummary } from '../services/surfaceAnalysis';
 import type { MountainPass } from '../services/wikidata';
@@ -34,7 +35,8 @@ interface RouteState {
   setMountainPasses: (passes: MountainPass[]) => void;
 }
 
-let nextId = 1;
+/** Ids survive reloads (waypoints are persisted), so a counter would collide. */
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 /**
  * Structural equality for day segments. The day splitter re-runs whenever
@@ -58,7 +60,7 @@ function daySegmentsEqual(a: DaySegment[], b: DaySegment[]): boolean {
   });
 }
 
-export const useRouteStore = create<RouteState>((set, get) => ({
+export const useRouteStore = create<RouteState>()(persist((set, get) => ({
   waypoints: [],
   routeGeometry: null,
   routeStats: null,
@@ -70,19 +72,23 @@ export const useRouteStore = create<RouteState>((set, get) => ({
   surfaceSummary: null,
   mountainPasses: [],
 
+  // User edits invalidate imported/restored geometry -> BRouter recalculates.
   addWaypoint: (lat, lng) =>
     set((s) => ({
-      waypoints: [...s.waypoints, { id: String(nextId++), lat, lng }],
+      waypoints: [...s.waypoints, { id: newId(), lat, lng }],
+      gpxGeometryLoaded: false,
     })),
 
   updateWaypoint: (id, lat, lng) =>
     set((s) => ({
       waypoints: s.waypoints.map((w) => (w.id === id ? { ...w, lat, lng } : w)),
+      gpxGeometryLoaded: false,
     })),
 
   removeWaypoint: (id) =>
     set((s) => ({
       waypoints: s.waypoints.filter((w) => w.id !== id),
+      gpxGeometryLoaded: false,
     })),
 
   clearRoute: () =>
@@ -91,14 +97,31 @@ export const useRouteStore = create<RouteState>((set, get) => ({
   setRouteGeometry: (geom) => set({ routeGeometry: geom }),
   setRouteStats: (stats) => set({ routeStats: stats }),
   setIsCalculating: (v) => set({ isCalculating: v }),
-  setWaypoints: (wps) => set({ waypoints: wps }),
+  setWaypoints: (wps) => set({ waypoints: wps, gpxGeometryLoaded: false }),
   setDaySegments: (segs) => {
     if (daySegmentsEqual(get().daySegments, segs)) return;
     set({ daySegments: segs });
   },
   setDailyTargetKm: (km) => set({ dailyTargetKm: Math.max(20, Math.min(300, km)) }),
-  setRoutingProfile: (p) => set({ routingProfile: p }),
+  setRoutingProfile: (p) => set({ routingProfile: p, gpxGeometryLoaded: false }),
   setGpxGeometryLoaded: (v) => set({ gpxGeometryLoaded: v }),
   setSurfaceSummary: (s) => set({ surfaceSummary: s }),
   setMountainPasses: (passes) => set({ mountainPasses: passes }),
+}), {
+  name: 'bikepacking-route',
+  // Persist the inputs and the computed geometry; day segments, surface and
+  // passes are re-derived on load.
+  partialize: (s) => ({
+    waypoints: s.waypoints,
+    routeGeometry: s.routeGeometry,
+    routeStats: s.routeStats,
+    dailyTargetKm: s.dailyTargetKm,
+    routingProfile: s.routingProfile,
+  }),
+  merge: (persisted, current) => {
+    const p = (persisted ?? {}) as Partial<RouteState>;
+    // A restored geometry is authoritative: skip the BRouter round-trip on
+    // load (and keep the plan usable offline). Same mechanism as GPX import.
+    return { ...current, ...p, gpxGeometryLoaded: !!p.routeGeometry };
+  },
 }));

@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Bike, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, Package, Coffee, Backpack, ShoppingCart, CloudSun, Settings } from 'lucide-react';
 import { RoutePanel } from './RoutePanel';
-import { SupplyPanel } from './SupplyPanel';
-import { DietPanel } from './DietPanel';
-import { GearPanel } from './GearPanel';
-import { ResupplyPanel } from './ResupplyPanel';
-import { WeatherPanel } from './WeatherPanel';
-import { SettingsPanel } from './SettingsPanel';
 import { GPXImport } from './GPXImport';
 import { SavedRoutes } from './SavedRoutes';
+
+// Only the Route tab is needed on first paint; the rest load on demand.
+const SupplyPanel = lazy(() => import('./SupplyPanel').then((m) => ({ default: m.SupplyPanel })));
+const DietPanel = lazy(() => import('./DietPanel').then((m) => ({ default: m.DietPanel })));
+const GearPanel = lazy(() => import('./GearPanel').then((m) => ({ default: m.GearPanel })));
+const ResupplyPanel = lazy(() => import('./ResupplyPanel').then((m) => ({ default: m.ResupplyPanel })));
+const WeatherPanel = lazy(() => import('./WeatherPanel').then((m) => ({ default: m.WeatherPanel })));
+const SettingsPanel = lazy(() => import('./SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 
 type Tab = 'route' | 'supply' | 'diet' | 'gear' | 'shopping' | 'weather' | 'settings';
 
@@ -87,12 +89,14 @@ export function Sidebar() {
                   <SavedRoutes />
                 </>
               )}
-              {activeTab === 'supply' && <SupplyPanel />}
-              {activeTab === 'diet' && <DietPanel />}
-              {activeTab === 'gear' && <GearPanel />}
-              {activeTab === 'shopping' && <ResupplyPanel />}
-              {activeTab === 'weather' && <WeatherPanel />}
-              {activeTab === 'settings' && <SettingsPanel />}
+              <Suspense fallback={<div className="panel" />}>
+                {activeTab === 'supply' && <SupplyPanel />}
+                {activeTab === 'diet' && <DietPanel />}
+                {activeTab === 'gear' && <GearPanel />}
+                {activeTab === 'shopping' && <ResupplyPanel />}
+                {activeTab === 'weather' && <WeatherPanel />}
+                {activeTab === 'settings' && <SettingsPanel />}
+              </Suspense>
             </div>
           )}
         </>

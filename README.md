@@ -66,7 +66,8 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 - **Carry weight curve** visualization with heavy-load warnings
 
 ### Offline & PWA
-- Installable as a standalone app on mobile and desktop
+- Installable as a standalone app on mobile and desktop (tested target: Vanadium on GrapheneOS)
+- Your route and trip settings survive a reload; shops and water come back from the local cache
 - Service worker caches map tiles, routes, and POI data
 - No WebAssembly, no trackers, no accounts — runs in hardened browsers such as Vanadium on GrapheneOS
 
