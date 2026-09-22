@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Client-side bikepacking trip planner for Poland (React 18 + TypeScript + Vite,
-MapLibre GL, Zustand, sql.js). No backend; all APIs are free and keyless
+MapLibre GL, Zustand, IndexedDB). No backend; all APIs are free and keyless
 (BRouter, Overpass, Open-Meteo, InPost, OpenFreeMap tiles).
 
 ## Commands
@@ -51,9 +51,14 @@ npm run build -- --base=/bikepacking-planner/   # build exactly as deployed
   aborting in-flight weather fetches downstream.
 - The weather cache key includes the day count — segment count can change for
   the same route+date once supply alignment lands.
-- sql.js wasm is copied to `public/` by the `postinstall` script and loaded
-  via `import.meta.env.BASE_URL` (base-path-safe). PWA manifest URLs are
-  relative for the same reason.
+- No WebAssembly on purpose: the target phone browser (Vanadium on
+  GrapheneOS) runs WASM without JIT, so the POI cache is plain IndexedDB
+  (`src/services/poiCache.ts`). Don't bring sql.js or other WASM back.
+- PWA manifest URLs are relative so the app works under the Pages base path.
+- `useAutoPlan` regenerates the resupply plan whenever its inputs change and
+  is the single place that resolves the 'auto' strategy; the Generate button
+  calls the same `buildPlanFromStores`. `debugLog` prints to the console in
+  dev only — there is no in-app log panel.
 
 ## Testing conventions
 

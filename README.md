@@ -44,7 +44,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
   - **Bail-out points** — train stations, hospitals
 - **Paczkomat (InPost)** locker integration for pre-shipping supplies
 - **Adjustable search corridor** around your route
-- **SQLite caching** — POI results cached in-browser for 7 days
+- **Offline POI cache** — results kept in IndexedDB for 7 days
 
 ### Smart Planning
 - **Gap analysis** — detects dangerous food and water resupply gaps with severity levels (safe / caution / danger)
@@ -68,7 +68,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 ### Offline & PWA
 - Installable as a standalone app on mobile and desktop
 - Service worker caches map tiles, routes, and POI data
-- SQLite database runs entirely in-browser (sql.js / WASM)
+- No WebAssembly, no trackers, no accounts — runs in hardened browsers such as Vanadium on GrapheneOS
 
 ## Tech Stack
 
@@ -84,7 +84,7 @@ A fully client-side web app for planning bikepacking routes across Poland. Combi
 | Weather | Open-Meteo API |
 | Parcels | InPost API |
 | Geo utils | Turf.js |
-| Local DB | SQLite via sql.js (in-browser WASM) |
+| Local cache | IndexedDB |
 | Icons | Lucide React |
 | Toasts | Sonner |
 | Testing | Vitest (unit) + Playwright (E2E) |

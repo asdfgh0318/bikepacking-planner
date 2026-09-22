@@ -2735,66 +2735,7 @@ html, body, #root {
   .elevation-profile { padding: 4px 8px 3px; }
 }
 
-/* === Debug Panel === */
-.debug-panel {
-  background: var(--surface-2);
-  border-radius: var(--radius);
-  padding: 12px;
-  margin-bottom: 16px;
-}
-
-.debug-stats {
-  margin-bottom: 10px;
-}
-
-.debug-count {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.debug-cat-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-  font-size: 12px;
-}
-
-.debug-cat-name {
-  font-weight: 600;
-  color: var(--text);
-  min-width: 60px;
-}
-
-.debug-badge {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 500;
-}
-
-.debug-badge.error {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-}
-
-.debug-badge.warn {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fbbf24;
-}
-
-.debug-badge.info {
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
-}
-
-.debug-actions {
-  display: flex;
-  gap: 6px;
-}
-
+/* === Small buttons === */
 .btn-sm {
   padding: 4px 10px;
   font-size: 11px;
@@ -2808,67 +2749,6 @@ html, body, #root {
 
 .btn-sm:hover {
   background: var(--border);
-}
-
-.debug-live-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #4ade80;
-  margin-left: 6px;
-  animation: pulse-dot 1.5s infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.debug-recent {
-  margin-top: 10px;
-  max-height: 300px;
-  overflow-y: auto;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 10px;
-  line-height: 1.5;
-}
-
-.debug-entry {
-  padding: 2px 0;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: baseline;
-}
-
-.debug-entry-error { color: #ef4444; }
-.debug-entry-warn { color: #fbbf24; }
-.debug-entry-info { color: #94a3b8; }
-.debug-entry-debug { color: #64748b; }
-
-.debug-time {
-  color: #64748b;
-  flex-shrink: 0;
-}
-
-.debug-lvl {
-  font-weight: 700;
-  width: 10px;
-  flex-shrink: 0;
-}
-
-.debug-evt {
-  flex: 1;
-  min-width: 0;
-}
-
-.debug-det {
-  width: 100%;
-  padding-left: 46px;
-  color: #64748b;
-  word-break: break-all;
 }
 
 /* === Wizard Overlay === */

@@ -28,6 +28,4 @@ dist-ssr
 test-results/
 playwright-report/
 
-# App-generated debug exports
-bikepacking-debug-*.csv
 *.pdf
