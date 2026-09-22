@@ -1,10 +1,8 @@
-import { useState, useSyncExternalStore } from 'react';
 import { toast } from 'sonner';
 import { useSupplyStore } from '../../store/supplyStore';
 import { useResupplyStore } from '../../store/resupplyStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Toggle, RangeSlider } from '../ui';
-import { debugLog } from '../../utils/debugLogger';
 import type { Season } from '../../types';
 
 const SEASON_OPTIONS: { id: Season; label: string; icon: string }[] = [
@@ -14,18 +12,7 @@ const SEASON_OPTIONS: { id: Season; label: string; icon: string }[] = [
   { id: 'winter', label: 'Winter', icon: '❄️' },
 ];
 
-/** Live-subscribe to debugLog changes */
-function useDebugLog() {
-  const count = useSyncExternalStore(
-    (cb) => debugLog.subscribe(cb),
-    () => debugLog.count(),
-  );
-  return count;
-}
-
 export function SettingsPanel() {
-  useDebugLog(); // subscribe to trigger re-renders
-  const [showRecent, setShowRecent] = useState(false);
   const theme = useSettingsStore((s) => s.theme);
   const toggleTheme = useSettingsStore((s) => s.toggleTheme);
 
@@ -59,11 +46,6 @@ export function SettingsPanel() {
   const setShowToilets = useSupplyStore((s) => s.setShowToilets);
   const showHalts = useSupplyStore((s) => s.showHalts);
   const setShowHalts = useSupplyStore((s) => s.setShowHalts);
-
-  const entries = debugLog.getEntries();
-  const summary = debugLog.summary();
-  const cats = Object.keys(summary);
-  const recent = debugLog.getLast(20);
 
   return (
     <div className="panel">
@@ -157,7 +139,7 @@ export function SettingsPanel() {
       <div className="section-label">Cache</div>
       <div className="setting-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0' }}>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>POI cache (SQLite)</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cached shops, water and stations</span>
           <button className="btn btn-sm" onClick={async () => {
             const { clearCache } = await import('../../services/poiCache');
             await clearCache();
@@ -166,46 +148,6 @@ export function SettingsPanel() {
             Clear Cache
           </button>
         </div>
-      </div>
-
-      <div className="section-label">Debug Log <span className="debug-live-dot" /></div>
-      <div className="debug-panel">
-        <div className="debug-stats">
-          <div className="debug-count">{entries.length} events (live)</div>
-          {cats.map((cat) => (
-            <div key={cat} className="debug-cat-row">
-              <span className="debug-cat-name">{cat}</span>
-              {summary[cat].error > 0 && <span className="debug-badge error">{summary[cat].error} err</span>}
-              {summary[cat].warn > 0 && <span className="debug-badge warn">{summary[cat].warn} warn</span>}
-              <span className="debug-badge info">{summary[cat].info + summary[cat].debug} info</span>
-            </div>
-          ))}
-        </div>
-
-        <div className="debug-actions">
-          <button className="btn btn-sm" onClick={() => setShowRecent(!showRecent)}>
-            {showRecent ? 'Hide' : 'Recent'}
-          </button>
-          <button className="btn btn-sm" onClick={() => debugLog.download()}>
-            Download CSV
-          </button>
-          <button className="btn btn-sm" onClick={() => debugLog.clear()}>
-            Clear
-          </button>
-        </div>
-
-        {showRecent && (
-          <div className="debug-recent">
-            {recent.map((e, i) => (
-              <div key={i} className={`debug-entry debug-entry-${e.level}`}>
-                <span className="debug-time">{e.timestamp.slice(11, 19)}</span>
-                <span className="debug-lvl">{e.level[0].toUpperCase()}</span>
-                <span className="debug-evt">[{e.category}] {e.event}</span>
-                {e.details && <div className="debug-det">{e.details.slice(0, 200)}</div>}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

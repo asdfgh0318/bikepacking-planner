@@ -15,6 +15,7 @@ import { useWeatherFetching } from './hooks/useWeatherFetching';
 import { useGapAnalysis } from './hooks/useGapAnalysis';
 import { useBailOutFetching } from './hooks/useBailOutFetching';
 import { useMountainPasses } from './hooks/useMountainPasses';
+import { useAutoPlan } from './hooks/useAutoPlan';
 
 function App() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
@@ -62,6 +63,9 @@ function App() {
 
   // Fetch mountain passes from Wikidata for elevation profile labels
   useMountainPasses();
+
+  // Keep the resupply plan in sync with route, supply, diet and strategy changes
+  useAutoPlan();
 
   return (
     <div className="app">

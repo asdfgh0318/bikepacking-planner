@@ -16,11 +16,10 @@ import type { SupplyPoint } from '../types';
  * are still fetched via bbox and corridor-filtered here. After merging, runs
  * gap analysis and day splitting.
  *
- * Note: The Overpass fetch does NOT use the abort signal because the SQLite
- * cache check takes ~1-2s. React StrictMode (or rapid route changes) can
- * abort the controller during that window, causing the Overpass query to
- * never fire. Instead, we rely on the `cancelled` flag to discard stale
- * results, and only use the signal for the fast InPost API call.
+ * The Overpass fetch does not take the abort signal: React StrictMode's
+ * double-mount aborts the first controller before the request fires. Stale
+ * results are discarded by the version counter instead; only the InPost
+ * call is aborted.
  */
 export function useSupplyPointFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
@@ -47,10 +46,7 @@ export function useSupplyPointFetching(): void {
       setIsLoading(true);
       debugLog.info('supply', 'fetch:start', { corridorWidthKm, version });
       try {
-        // Fire 2 parallel calls: Overpass (via cache manager) + InPost
-        // Overpass does NOT get the abort signal — its SQLite cache check is
-        // slow enough that the signal can be triggered by React lifecycle
-        // before the actual network request fires.
+        // Overpass (via cache manager) and InPost in parallel
         const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
         const [overpassResult, paczkomatyRaw] = await Promise.allSettled([
           getOrFetchSupplyPOIs(routeGeometry!, corridorWidthKm),

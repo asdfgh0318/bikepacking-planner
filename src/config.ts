@@ -139,10 +139,10 @@ export const OVERPASS_ROUTE_SAMPLE_POINTS = 80;
 export const MAX_GPX_WAYPOINTS = 50;
 
 // ---------------------------------------------------------------------------
-// SQLite POI Cache
+// POI Cache (IndexedDB)
 // ---------------------------------------------------------------------------
 
-/** SQLite POI cache TTL (ms). 7 days for Overpass data. */
+/** POI cache TTL (ms). 7 days for Overpass data. */
 export const POI_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** InPost cache TTL (ms). 1 day (locations change more often). */

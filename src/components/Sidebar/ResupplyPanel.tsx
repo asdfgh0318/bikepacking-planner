@@ -3,12 +3,10 @@ import { ShoppingCart, Zap, Cloud, ChevronRight, ChevronDown } from 'lucide-reac
 import { toast } from 'sonner';
 import { useRouteStore } from '../../store/routeStore';
 import { useSupplyStore } from '../../store/supplyStore';
-import { useDietStore } from '../../store/dietStore';
 import { useResupplyStore } from '../../store/resupplyStore';
-import { DIET_PROFILES } from '../../services/diet';
 import { RESUPPLY_PRESETS, autoDetectStrategy } from '../../services/resupplyPlanner';
 import type { ResupplyStrategyId } from '../../types';
-import { generateUnifiedPlan } from '../../services/unifiedPlan';
+import { buildPlanFromStores } from '../../hooks/useAutoPlan';
 import { debugLog } from '../../utils/debugLogger';
 import { weatherEmoji } from '../../services/weather';
 import { RangeSlider, Toggle, StatCard, EmptyState } from '../ui';
@@ -35,8 +33,6 @@ const VIEW_TABS = [
 export function ResupplyPanel() {
   const daySegments = useRouteStore((s) => s.daySegments);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
-  const supplyGaps = useSupplyStore((s) => s.supplyGaps);
-  const selectedDiet = useDietStore((s) => s.selectedDiet);
 
   const enablePaczkomat = useResupplyStore((s) => s.enablePaczkomatShipping);
   const setEnablePaczkomat = useResupplyStore((s) => s.setEnablePaczkomatShipping);
@@ -44,7 +40,6 @@ export function ResupplyPanel() {
   const setPaczkomatConfig = useResupplyStore((s) => s.setPaczkomatConfig);
   const resupplyConfig = useResupplyStore((s) => s.resupplyConfig);
   const setResupplyConfig = useResupplyStore((s) => s.setResupplyConfig);
-  const tripContext = useResupplyStore((s) => s.tripContext);
   const strategyId = useResupplyStore((s) => s.strategyId);
   const strategy = useResupplyStore((s) => s.strategy);
   const setStrategyId = useResupplyStore((s) => s.setStrategyId);
@@ -66,7 +61,6 @@ export function ResupplyPanel() {
   const autoResult = strategyId === 'auto' && routeStats
     ? autoDetectStrategy(supplyPoints, routeStats.distanceKm)
     : null;
-  const resolvedStrategy = autoResult ? RESUPPLY_PRESETS[autoResult.strategyId] : strategy;
 
   if (daySegments.length === 0) {
     return (
@@ -82,44 +76,11 @@ export function ResupplyPanel() {
 
   const handleGenerate = () => {
     setIsPlanning(true);
-    debugLog.info('resupply', 'generate:start', {
-      strategyId,
-      strategy: strategy.label,
-      dayCount: daySegments.length,
-      supplyPointCount: supplyPoints.length,
-      supplyGapCount: supplyGaps.length,
-      diet: selectedDiet,
-      paczkomat: enablePaczkomat,
-      rideStartHour: resupplyConfig.rideStartHour,
-      avgSpeedKmh: resupplyConfig.avgSpeedKmh,
-    });
     try {
-      const profile = DIET_PROFILES[selectedDiet];
-      const plan = generateUnifiedPlan(
-        profile,
-        daySegments,
-        supplyPoints,
-        supplyGaps,
-        enablePaczkomat ? paczkomatConfig : null,
-        { ...resupplyConfig, strategy: resolvedStrategy, tripStartDate: resupplyConfig.tripStartDate, tripContext }
-      );
-      setUnifiedPlan(plan);
-      debugLog.info('resupply', 'generate:success', {
-        purchases: plan.resupply.purchases.length,
-        totalCalories: plan.resupply.totalCalories,
-        maxCarryWeightG: plan.resupply.maxCarryWeightG,
-        warnings: plan.resupply.warnings.length,
-        parcels: plan.shipping?.totalParcels ?? 0,
-        dayBreakdowns: plan.dayBreakdown.length,
-      });
-      if (plan.resupply.warnings.length > 0) {
-        for (const w of plan.resupply.warnings) {
-          debugLog.warn('resupply', `warning:${w.type}`, w.message);
-        }
-      }
+      setUnifiedPlan(buildPlanFromStores());
       toast.success('Smart resupply plan generated');
     } catch (err) {
-      debugLog.error('resupply', 'generate:fail', err instanceof Error ? err.message : String(err));
+      debugLog.error('plan', 'generate failed', err instanceof Error ? err.message : String(err));
       toast.error('Failed to generate resupply plan');
     } finally {
       setIsPlanning(false);
