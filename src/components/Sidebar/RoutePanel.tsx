@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { MapPin, X, Download, Upload, Moon, Tent } from 'lucide-react';
 import { useRouteStore } from '../../store/routeStore';
-import { distanceKm } from '../../utils/distance';
+import { lineStats } from '../../utils/geo';
 import { useSupplyStore } from '../../store/supplyStore';
 import { exportGPX, downloadGPX, readFileAsText, parseGPX } from '../../utils/gpx';
 import { parseGpxToWaypoints } from '../../services/gpx';
@@ -52,21 +52,7 @@ export function RoutePanel() {
         setGpxGeometryLoaded(true);
         setRouteGeometry(geometry);
         // Compute basic stats from the geometry coordinates
-        const coords = geometry.coordinates;
-        let dist = 0;
-        let ascent = 0;
-        let descent = 0;
-        for (let i = 1; i < coords.length; i++) {
-          const [lng1, lat1, z1] = coords[i - 1];
-          const [lng2, lat2, z2] = coords[i];
-          dist += distanceKm(lat1, lng1, lat2, lng2);
-          if (z1 != null && z2 != null) {
-            const diff = z2 - z1;
-            if (diff > 0) ascent += diff;
-            else descent += Math.abs(diff);
-          }
-        }
-        setRouteStats({ distanceKm: dist, ascentM: ascent, descentM: descent });
+        setRouteStats(lineStats(geometry.coordinates));
       }
     } catch {
       // Fallback: try the simpler DOMParser-based parser from services/gpx

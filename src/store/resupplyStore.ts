@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { PaczkomatConfig, ResupplyStrategy, ResupplyStrategyId, UnifiedShoppingPlan, TripContext, Season, RouteWeather } from '../types';
 import type { WaterPlan } from '../services/waterPlanner';
 import { RESUPPLY_PRESETS } from '../services/resupplyPlanner';
+import { todayLocal } from '../utils/date';
 
 // Season defaults (Poland, ~52°N latitude)
 const SEASON_DEFAULTS: Record<Season, Omit<TripContext, 'season'>> = {
@@ -56,13 +57,13 @@ export const useResupplyStore = create<ResupplyState>()(persist((set) => ({
     intervalDays: 3,
     prefer24h: true,
     preferNearNightStop: true,
-    tripStartDate: new Date().toISOString().split('T')[0],
+    tripStartDate: todayLocal(),
     leadTimeDays: 2,
   },
   resupplyConfig: {
     rideStartHour: 7,
     avgSpeedKmh: 15,
-    tripStartDate: new Date().toISOString().split('T')[0],
+    tripStartDate: todayLocal(),
   },
   strategyId: 'auto',
   strategy: { ...RESUPPLY_PRESETS['auto'] },
