@@ -122,8 +122,11 @@ export function useSupplyPointFetching(): void {
           // Analyze supply gaps
           const routeStats = useRouteStore.getState().routeStats;
           const totalDistKm = routeStats?.distanceKm ?? 0;
-          const rawGaps = analyzeSupplyGaps(supplyPoints, totalDistKm);
-          const gaps = enrichGapsWithSuggestions(rawGaps, supplyPoints, corridorWidthKm);
+          // A locker is only food if a parcel was shipped to it; the shipping
+          // plan handles that case, so gaps are measured shop to shop.
+          const shopsOnly = supplyPoints.filter((p) => p.type !== 'paczkomat');
+          const rawGaps = analyzeSupplyGaps(shopsOnly, totalDistKm);
+          const gaps = enrichGapsWithSuggestions(rawGaps, shopsOnly, corridorWidthKm);
           setSupplyGaps(gaps);
           const wGaps = analyzeWaterGaps(supplyPoints, totalDistKm);
           setWaterGaps(wGaps);

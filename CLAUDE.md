@@ -63,9 +63,23 @@ npm run build -- --base=/bikepacking-planner/   # build exactly as deployed
   it is set by GPX import and by restore, and cleared by every user edit in
   `routeStore` — never reset it inside the calculation hook again.
 - `useAutoPlan` regenerates the resupply plan whenever its inputs change and
-  is the single place that resolves the 'auto' strategy; the Generate button
-  calls the same `buildPlanFromStores`. `debugLog` prints to the console in
-  dev only — there is no in-app log panel.
+  is the single place that resolves the 'auto' strategy. `debugLog` prints to
+  the console in dev only — there is no in-app log panel.
+
+## Shape of the app (after the 2026-09 rebuild)
+
+- Three stores: `routeStore` (line, waypoints, days), `supplyStore` (POIs,
+  gaps, corridor, map layer groups), `tripStore` (dates, riding, diet,
+  strategy, and the derived weather / water plan / resupply plan).
+  `settingsStore` holds only the theme.
+- One panel, no tabs: `src/components/sections/*` are stacked collapsible
+  sections (Route, Days, Supply, Resupply plan, Weather, Map & settings).
+  Sections that need a route return null until there is one. Shared
+  controls live in `src/components/ui.tsx`; all styling in `src/index.css`.
+- Sonner's `<Toaster>` must stay outside the `.app` grid: it renders a plain
+  `<section>` that would otherwise take the first grid cell.
+- The phone media query is at the end of `index.css` on purpose so it wins
+  over the component rules above it.
 
 ## Testing conventions
 

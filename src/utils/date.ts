@@ -41,3 +41,21 @@ export function todayLocal(now: Date = new Date()): string {
   const d = String(now.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** 0 = Sunday … 6 = Saturday for an ISO calendar date; -1 if invalid. */
+export function weekday(isoDate: string): number {
+  if (!ISO_DATE.test(isoDate)) return -1;
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+/** "Sat 4 Jul" for an ISO calendar date; the input unchanged if invalid. */
+export function formatShortDate(isoDate: string): string {
+  const wd = weekday(isoDate);
+  if (wd < 0) return isoDate;
+  const [, m, d] = isoDate.split('-').map(Number);
+  return `${WEEKDAYS[wd]} ${d} ${MONTHS[m - 1]}`;
+}

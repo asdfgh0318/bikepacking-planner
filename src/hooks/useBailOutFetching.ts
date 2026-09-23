@@ -5,42 +5,25 @@ import { getOrFetchBailOutPOIs } from '../services/cacheManager';
 import { debugLog } from '../utils/debugLogger';
 
 /**
- * Fetches bail-out points (train stations, halts, hospitals) when enabled and route exists.
- * Uses a wider corridor (corridorWidthKm + 5) via the cacheManager, which handles
- * Overpass fetching, classification, distance calculation, and caching.
- *
- * Does NOT pass abort signal to Overpass — see useSupplyPointFetching for rationale.
+ * Bail-out points (stations, halts, hospitals) in a wider corridor, only
+ * while that layer is on. No abort signal for Overpass — see
+ * useSupplyPointFetching for why; stale results are dropped instead.
  */
 export function useBailOutFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
-
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
-  const showBailOut = useSupplyStore((s) => s.showBailOut);
+  const enabled = useSupplyStore((s) => s.layers.bailout);
   const setBailOutPoints = useSupplyStore((s) => s.setBailOutPoints);
 
   useEffect(() => {
-    if (!routeGeometry || !showBailOut) {
+    if (!routeGeometry || !enabled) {
       setBailOutPoints([]);
       return;
     }
-
     let cancelled = false;
-
-    async function loadBailOut() {
-      try {
-        // cacheManager handles: cache check, Overpass fetch, classification,
-        // distanceFromStartKm calculation, sorting, and caching results.
-        const points = await getOrFetchBailOutPOIs(routeGeometry!, corridorWidthKm);
-        if (cancelled) return;
-
-        setBailOutPoints(points);
-        debugLog.info('bailout', 'points:loaded', { total: points.length });
-      } catch (err) {
-        debugLog.error('bailout', 'fetch:error', err instanceof Error ? err.message : String(err));
-      }
-    }
-
-    loadBailOut();
+    getOrFetchBailOutPOIs(routeGeometry, corridorWidthKm)
+      .then((points) => { if (!cancelled) setBailOutPoints(points); })
+      .catch((err) => debugLog.error('bailout', 'fetch failed', err instanceof Error ? err.message : String(err)));
     return () => { cancelled = true; };
-  }, [routeGeometry, showBailOut, corridorWidthKm, setBailOutPoints]);
+  }, [routeGeometry, enabled, corridorWidthKm, setBailOutPoints]);
 }

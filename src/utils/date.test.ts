@@ -67,3 +67,14 @@ describe('todayLocal', () => {
     expect(todayLocal(d)).toBe('2026-09-22');
   });
 });
+
+describe('weekday / formatShortDate', () => {
+  it('computes the weekday in UTC regardless of local zone', async () => {
+    const { weekday, formatShortDate } = await import('./date');
+    expect(weekday('2026-07-05')).toBe(0); // Sunday
+    expect(weekday('2026-07-04')).toBe(6);
+    expect(weekday('nope')).toBe(-1);
+    expect(formatShortDate('2026-07-04')).toBe('Sat 4 Jul');
+    expect(formatShortDate('nope')).toBe('nope');
+  });
+});

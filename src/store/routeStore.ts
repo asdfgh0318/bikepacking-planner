@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Waypoint, RouteStats, DaySegment, RoutingProfile } from '../types';
-import type { SurfaceSummary } from '../services/surfaceAnalysis';
-import type { MountainPass } from '../services/wikidata';
 
 interface RouteState {
   waypoints: Waypoint[];
@@ -14,10 +12,6 @@ interface RouteState {
   routingProfile: RoutingProfile;
   /** When true, the current geometry came from a GPX import and should not be overwritten by BRouter. */
   gpxGeometryLoaded: boolean;
-  /** Surface quality analysis from Overpass (surface/tracktype tags). */
-  surfaceSummary: SurfaceSummary | null;
-  /** Mountain passes/saddles from Wikidata, positioned along the route. */
-  mountainPasses: MountainPass[];
 
   addWaypoint: (lat: number, lng: number) => void;
   updateWaypoint: (id: string, lat: number, lng: number) => void;
@@ -31,8 +25,6 @@ interface RouteState {
   setDailyTargetKm: (km: number) => void;
   setRoutingProfile: (p: RoutingProfile) => void;
   setGpxGeometryLoaded: (v: boolean) => void;
-  setSurfaceSummary: (s: SurfaceSummary | null) => void;
-  setMountainPasses: (passes: MountainPass[]) => void;
 }
 
 /** Ids survive reloads (waypoints are persisted), so a counter would collide. */
@@ -69,8 +61,6 @@ export const useRouteStore = create<RouteState>()(persist((set, get) => ({
   dailyTargetKm: 80,
   routingProfile: 'trekking',
   gpxGeometryLoaded: false,
-  surfaceSummary: null,
-  mountainPasses: [],
 
   // User edits invalidate imported/restored geometry -> BRouter recalculates.
   addWaypoint: (lat, lng) =>
@@ -92,7 +82,7 @@ export const useRouteStore = create<RouteState>()(persist((set, get) => ({
     })),
 
   clearRoute: () =>
-    set({ waypoints: [], routeGeometry: null, routeStats: null, daySegments: [], gpxGeometryLoaded: false, surfaceSummary: null, mountainPasses: [] }),
+    set({ waypoints: [], routeGeometry: null, routeStats: null, daySegments: [], gpxGeometryLoaded: false }),
 
   setRouteGeometry: (geom) => set({ routeGeometry: geom }),
   setRouteStats: (stats) => set({ routeStats: stats }),
@@ -105,8 +95,6 @@ export const useRouteStore = create<RouteState>()(persist((set, get) => ({
   setDailyTargetKm: (km) => set({ dailyTargetKm: Math.max(20, Math.min(300, km)) }),
   setRoutingProfile: (p) => set({ routingProfile: p, gpxGeometryLoaded: false }),
   setGpxGeometryLoaded: (v) => set({ gpxGeometryLoaded: v }),
-  setSurfaceSummary: (s) => set({ surfaceSummary: s }),
-  setMountainPasses: (passes) => set({ mountainPasses: passes }),
 }), {
   name: 'bikepacking-route',
   // Persist the inputs and the computed geometry; day segments, surface and

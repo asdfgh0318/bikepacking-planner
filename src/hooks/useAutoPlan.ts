@@ -1,38 +1,57 @@
 import { useEffect } from 'react';
 import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
-import { useDietStore } from '../store/dietStore';
-import { useResupplyStore } from '../store/resupplyStore';
+import { useTripStore } from '../store/tripStore';
 import { DIET_PROFILES } from '../services/diet';
 import { RESUPPLY_PRESETS, autoDetectStrategy } from '../services/resupplyPlanner';
 import { generateUnifiedPlan } from '../services/unifiedPlan';
 import { debugLog } from '../utils/debugLogger';
 import type { UnifiedShoppingPlan } from '../types';
 
-const DEBOUNCE_MS = 1000;
+const DEBOUNCE_MS = 800;
+
+/** Ship a parcel every N days when Paczkomat pre-shipping is on. */
+const PACZKOMAT_INTERVAL_DAYS = 3;
+const PACZKOMAT_LEAD_TIME_DAYS = 2;
 
 /**
- * Build the resupply plan from the current store state. Shared by the
- * automatic regeneration below and the manual "Generate" button, so both
- * resolve the 'auto' strategy the same way.
+ * Build the resupply plan from the current store state. The only place the
+ * 'auto' strategy is resolved, so every caller gets the same plan.
  */
 export function buildPlanFromStores(): UnifiedShoppingPlan {
   const route = useRouteStore.getState();
   const supply = useSupplyStore.getState();
-  const diet = useDietStore.getState();
-  const resupply = useResupplyStore.getState();
+  const trip = useTripStore.getState();
 
-  const strategy = resupply.strategyId === 'auto' && route.routeStats
-    ? RESUPPLY_PRESETS[autoDetectStrategy(supply.supplyPoints, route.routeStats.distanceKm).strategyId]
-    : resupply.strategy;
+  // Lockers are food only when we ship parcels to them.
+  const points = trip.paczkomatShipping
+    ? supply.supplyPoints
+    : supply.supplyPoints.filter((p) => p.type !== 'paczkomat');
+
+  const strategy = trip.strategyId === 'auto' && route.routeStats
+    ? RESUPPLY_PRESETS[autoDetectStrategy(points, route.routeStats.distanceKm).strategyId]
+    : RESUPPLY_PRESETS[trip.strategyId];
 
   return generateUnifiedPlan(
-    DIET_PROFILES[diet.selectedDiet],
+    DIET_PROFILES[trip.diet],
     route.daySegments,
-    supply.supplyPoints,
+    points,
     supply.supplyGaps,
-    resupply.enablePaczkomatShipping ? resupply.paczkomatConfig : null,
-    { ...resupply.resupplyConfig, strategy, tripContext: resupply.tripContext },
+    trip.paczkomatShipping
+      ? {
+          intervalDays: PACZKOMAT_INTERVAL_DAYS,
+          prefer24h: true,
+          preferNearNightStop: true,
+          tripStartDate: trip.tripStartDate,
+          leadTimeDays: PACZKOMAT_LEAD_TIME_DAYS,
+        }
+      : null,
+    {
+      rideStartHour: trip.rideStartHour,
+      avgSpeedKmh: trip.avgSpeedKmh,
+      tripStartDate: trip.tripStartDate,
+      strategy,
+    },
   );
 }
 
@@ -47,35 +66,31 @@ export function useAutoPlan(): void {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
   const supplyGaps = useSupplyStore((s) => s.supplyGaps);
   const isLoading = useSupplyStore((s) => s.isLoading);
-  const selectedDiet = useDietStore((s) => s.selectedDiet);
-  const strategyId = useResupplyStore((s) => s.strategyId);
-  const strategy = useResupplyStore((s) => s.strategy);
-  const resupplyConfig = useResupplyStore((s) => s.resupplyConfig);
-  const tripContext = useResupplyStore((s) => s.tripContext);
-  const enablePaczkomatShipping = useResupplyStore((s) => s.enablePaczkomatShipping);
-  const paczkomatConfig = useResupplyStore((s) => s.paczkomatConfig);
-  const setUnifiedPlan = useResupplyStore((s) => s.setUnifiedPlan);
+  const tripStartDate = useTripStore((s) => s.tripStartDate);
+  const rideStartHour = useTripStore((s) => s.rideStartHour);
+  const avgSpeedKmh = useTripStore((s) => s.avgSpeedKmh);
+  const strategyId = useTripStore((s) => s.strategyId);
+  const diet = useTripStore((s) => s.diet);
+  const paczkomatShipping = useTripStore((s) => s.paczkomatShipping);
+  const setPlan = useTripStore((s) => s.setPlan);
 
   useEffect(() => {
-    if (daySegments.length === 0 || supplyPoints.length === 0) return;
-    if (isCalculating || isLoading) return;
-
+    if (daySegments.length === 0 || supplyPoints.length === 0 || isCalculating || isLoading) {
+      if (daySegments.length === 0) setPlan(null);
+      return;
+    }
     const timer = setTimeout(() => {
       try {
         const plan = buildPlanFromStores();
-        setUnifiedPlan(plan);
-        debugLog.info('plan', 'auto-generated', {
-          purchases: plan.resupply.purchases.length,
-          warnings: plan.resupply.warnings.length,
-        });
+        setPlan(plan);
+        debugLog.info('plan', 'generated', { purchases: plan.resupply.purchases.length, warnings: plan.resupply.warnings.length });
       } catch (err) {
-        debugLog.error('plan', 'auto-generate failed', err instanceof Error ? err.message : String(err));
+        debugLog.error('plan', 'failed', err instanceof Error ? err.message : String(err));
       }
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [
     daySegments, routeStats, isCalculating, supplyPoints, supplyGaps, isLoading,
-    selectedDiet, strategyId, strategy, resupplyConfig, tripContext,
-    enablePaczkomatShipping, paczkomatConfig, setUnifiedPlan,
+    tripStartDate, rideStartHour, avgSpeedKmh, strategyId, diet, paczkomatShipping, setPlan,
   ]);
 }

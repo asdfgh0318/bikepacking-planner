@@ -1,96 +1,74 @@
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { MapView } from './components/Map/MapView';
-import { Sidebar } from './components/Sidebar/Sidebar';
 import { ElevationProfile } from './components/ElevationProfile';
-import { Wizard } from './components/Wizard';
+import { RouteSection } from './components/sections/RouteSection';
+import { DaysSection } from './components/sections/DaysSection';
+import { SupplySection } from './components/sections/SupplySection';
+import { PlanSection } from './components/sections/PlanSection';
+import { WeatherSection } from './components/sections/WeatherSection';
+import { SettingsSection } from './components/sections/SettingsSection';
 import { useRouteStore } from './store/routeStore';
 import { useSettingsStore } from './store/settingsStore';
 import { decodeRouteFromHash } from './services/routeStorage';
 import { useRouteCalculation } from './hooks/useRouteCalculation';
 import { useDaySplitting } from './hooks/useDaySplitting';
 import { useSupplyPointFetching } from './hooks/useSupplyPointFetching';
-import { useSurfaceFetching } from './hooks/useSurfaceFetching';
+import { useBailOutFetching } from './hooks/useBailOutFetching';
 import { useWeatherFetching } from './hooks/useWeatherFetching';
 import { useGapAnalysis } from './hooks/useGapAnalysis';
-import { useBailOutFetching } from './hooks/useBailOutFetching';
-import { useMountainPasses } from './hooks/useMountainPasses';
 import { useAutoPlan } from './hooks/useAutoPlan';
 
-function App() {
+export default function App() {
   const setWaypoints = useRouteStore((s) => s.setWaypoints);
   const theme = useSettingsStore((s) => s.theme);
 
-  // Apply theme on mount and when it changes
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Load shared route from URL hash on mount
+  // A shared link carries the waypoints in the hash.
   useEffect(() => {
     const hash = window.location.hash;
-    if (hash.startsWith('#route=')) {
-      const encoded = hash.slice(7);
-      const decoded = decodeRouteFromHash(encoded);
-      if (decoded && decoded.waypoints.length >= 2) {
-        setWaypoints(decoded.waypoints);
-        window.history.replaceState(null, '', window.location.pathname);
-      }
+    if (!hash.startsWith('#route=')) return;
+    const decoded = decodeRouteFromHash(hash.slice(7));
+    if (decoded && decoded.waypoints.length >= 2) {
+      setWaypoints(decoded.waypoints);
+      window.history.replaceState(null, '', window.location.pathname);
     }
   }, [setWaypoints]);
 
-  // Route calculation with debounce
+  // The pipeline: route → days → supply points → gaps, weather, plan.
   useRouteCalculation();
-
-  // Split the route into daily segments — independent of supply data so
-  // Weather/Shop/Resupply work even when Overpass is unreachable
   useDaySplitting();
-
-  // Fetch supply points (shops, water, campsites, paczkomaty, repair)
   useSupplyPointFetching();
-
-  // Fetch surface quality data from Overpass
-  useSurfaceFetching();
-
-  // Fetch bail-out points (train stations, hospitals)
   useBailOutFetching();
-
-  // Fetch weather forecast
   useWeatherFetching();
-
-  // Re-analyze water gaps when weather data arrives (heat-adjusted)
   useGapAnalysis();
-
-  // Fetch mountain passes from Wikidata for elevation profile labels
-  useMountainPasses();
-
-  // Keep the resupply plan in sync with route, supply, diet and strategy changes
   useAutoPlan();
 
   return (
-    <div className="app">
-      <Toaster
-        theme={theme}
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: 'var(--surface-2)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            fontFamily: 'inherit',
-          },
-        }}
-      />
-      <Wizard />
-      <Sidebar />
-      <div className="main-area">
-        <main className="map-container">
-          <MapView />
-        </main>
+    <>
+      {/* Outside the grid: Sonner renders a plain <section> that would take a cell. */}
+      <Toaster theme={theme} position="top-center" toastOptions={{ className: 'toast' }} />
+      <div className="app">
+      <aside className="panel">
+        <header className="panel-head">
+          <h1>Bikepacking Planner</h1>
+          <span className="note">Poland · shops, water, Sundays, weather</span>
+        </header>
+        <RouteSection />
+        <DaysSection />
+        <SupplySection />
+        <PlanSection />
+        <WeatherSection />
+        <SettingsSection />
+      </aside>
+      <main className="map-area">
+        <div className="map"><MapView /></div>
         <ElevationProfile />
+      </main>
       </div>
-    </div>
+    </>
   );
 }
-
-export default App;
