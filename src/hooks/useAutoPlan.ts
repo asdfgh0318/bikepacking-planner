@@ -23,14 +23,19 @@ export function buildPlanFromStores(): UnifiedShoppingPlan {
   const supply = useSupplyStore.getState();
   const trip = useTripStore.getState();
 
+  // Lockers are food only when we ship parcels to them.
+  const points = trip.paczkomatShipping
+    ? supply.supplyPoints
+    : supply.supplyPoints.filter((p) => p.type !== 'paczkomat');
+
   const strategy = trip.strategyId === 'auto' && route.routeStats
-    ? RESUPPLY_PRESETS[autoDetectStrategy(supply.supplyPoints, route.routeStats.distanceKm).strategyId]
+    ? RESUPPLY_PRESETS[autoDetectStrategy(points, route.routeStats.distanceKm).strategyId]
     : RESUPPLY_PRESETS[trip.strategyId];
 
   return generateUnifiedPlan(
     DIET_PROFILES[trip.diet],
     route.daySegments,
-    supply.supplyPoints,
+    points,
     supply.supplyGaps,
     trip.paczkomatShipping
       ? {

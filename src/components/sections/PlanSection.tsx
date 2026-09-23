@@ -37,7 +37,8 @@ export function PlanSection() {
 
   if (daySegments.length === 0) return null;
 
-  const auto = strategyId === 'auto' && routeStats ? autoDetectStrategy(supplyPoints, routeStats.distanceKm) : null;
+  const points = paczkomat ? supplyPoints : supplyPoints.filter((p) => p.type !== 'paczkomat');
+  const auto = strategyId === 'auto' && routeStats ? autoDetectStrategy(points, routeStats.distanceKm) : null;
   const strategyText = auto
     ? `${RESUPPLY_PRESETS[auto.strategyId].label}: ${auto.reason}`
     : RESUPPLY_PRESETS[strategyId].description;

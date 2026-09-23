@@ -36,7 +36,8 @@ export function SupplySection() {
 
   if (!routeGeometry) return null;
 
-  const food = supplyPoints.filter((p) => LAYER_TYPES.food.has(p.type)).length;
+  const food = supplyPoints.filter((p) => LAYER_TYPES.food.has(p.type) && p.type !== 'paczkomat').length;
+  const lockers = supplyPoints.filter((p) => p.type === 'paczkomat').length;
   const water = supplyPoints.filter((p) => LAYER_TYPES.water.has(p.type)).length;
   const sleep = supplyPoints.filter((p) => LAYER_TYPES.sleep.has(p.type)).length;
   const dangers = [...supplyGaps, ...waterGaps].filter((g) => g.severity === 'danger').length;
@@ -48,7 +49,7 @@ export function SupplySection() {
         <Alert severity="warning">No supply points found. OpenStreetMap may be rate-limiting; try again in a minute or widen the corridor.</Alert>
       )}
       {supplyPoints.length > 0 && (
-        <p className="note">{food} food stops, {water} water sources, {sleep} places to sleep within {corridorWidthKm} km of the route.</p>
+        <p className="note">{food} food stops, {water} water sources, {sleep} places to sleep, {lockers} Paczkomaty within {corridorWidthKm} km of the route.</p>
       )}
 
       <GapList gaps={supplyGaps} kind="food" />
