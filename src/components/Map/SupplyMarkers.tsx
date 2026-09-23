@@ -1,68 +1,29 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Marker, Popup } from 'react-map-gl/maplibre';
 import type { MarkerEvent } from 'react-map-gl/maplibre';
-import { useSupplyStore } from '../../store/supplyStore';
+import { useSupplyStore, LAYER_TYPES } from '../../store/supplyStore';
 import { useRouteStore } from '../../store/routeStore';
 import { SUPPLY_COLORS, SUPPLY_ICONS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
 import { distanceKm } from '../../utils/distance';
+import { isClosedOnNonTradingSunday } from '../../data/sundayTrading';
 import type { SupplyPoint } from '../../types';
 
-const SHELTER_RADIUS_KM = 10; // show shelters within 10km of predicted night stops
+/** Campsites and shelters only matter near where you'll actually sleep. */
+const SHELTER_RADIUS_KM = 10;
 
-/**
- * Small helper to inject a static SVG string into a DOM node via ref callback,
- * avoiding dangerouslySetInnerHTML while still using pre-built SVG markup from
- * the ICONS lookup table (which contains only hardcoded constants).
- */
+/** Static SVG from the icon table, injected without dangerouslySetInnerHTML. */
 function SvgIcon({ svgString }: { svgString: string }) {
-  const ref = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (node) node.innerHTML = svgString;
-    },
-    [svgString],
-  );
-  return <div ref={ref} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} />;
+  const ref = useCallback((node: HTMLDivElement | null) => { if (node) node.innerHTML = svgString; }, [svgString]);
+  return <div ref={ref} className="supply-marker-icon" />;
 }
 
-const SupplyMarkerItem = React.memo(function SupplyMarkerItem({
-  pt,
-  onToggle,
-}: {
-  pt: SupplyPoint;
-  onToggle: (pt: SupplyPoint) => void;
-}) {
+const SupplyMarkerItem = React.memo(function SupplyMarkerItem({ pt, onToggle }: { pt: SupplyPoint; onToggle: (pt: SupplyPoint) => void }) {
   const c = SUPPLY_COLORS[pt.type] || SUPPLY_COLORS.shop;
-  const svg = SUPPLY_ICONS[pt.type] || SUPPLY_ICONS.shop;
-  const handleClick = useCallback(
-    (e: MarkerEvent<MouseEvent>) => {
-      e.originalEvent.stopPropagation();
-      onToggle(pt);
-    },
-    [pt, onToggle],
-  );
+  const handleClick = useCallback((e: MarkerEvent<MouseEvent>) => { e.originalEvent.stopPropagation(); onToggle(pt); }, [pt, onToggle]);
   return (
-    <Marker
-      latitude={pt.lat}
-      longitude={pt.lng}
-      anchor="center"
-      onClick={handleClick}
-    >
-      <div
-        className="supply-marker"
-        style={{
-          width: 30,
-          height: 30,
-          background: c.bg,
-          border: `2.5px solid ${c.border}`,
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-          cursor: 'pointer',
-        }}
-      >
-        <SvgIcon svgString={svg} />
+    <Marker latitude={pt.lat} longitude={pt.lng} anchor="center" onClick={handleClick}>
+      <div className="supply-marker" style={{ background: c.bg, borderColor: c.border }}>
+        <SvgIcon svgString={SUPPLY_ICONS[pt.type] || SUPPLY_ICONS.shop} />
       </div>
     </Marker>
   );
@@ -70,123 +31,48 @@ const SupplyMarkerItem = React.memo(function SupplyMarkerItem({
 
 export function SupplyMarkers() {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
-  const showPaczkomaty = useSupplyStore((s) => s.showPaczkomaty);
-  const showShops = useSupplyStore((s) => s.showShops);
-  const showWater = useSupplyStore((s) => s.showWater);
-  const showCampsites = useSupplyStore((s) => s.showCampsites);
-  const showRepair = useSupplyStore((s) => s.showRepair);
-  const showBailOut = useSupplyStore((s) => s.showBailOut);
-  const showFuel = useSupplyStore((s) => s.showFuel);
-  const showFood = useSupplyStore((s) => s.showFood);
-  const showPharmacy = useSupplyStore((s) => s.showPharmacy);
-  const showToilets = useSupplyStore((s) => s.showToilets);
-  const showHalts = useSupplyStore((s) => s.showHalts);
   const bailOutPoints = useSupplyStore((s) => s.bailOutPoints);
+  const layers = useSupplyStore((s) => s.layers);
   const daySegments = useRouteStore((s) => s.daySegments);
-  const [popupPoint, setPopupPoint] = useState<SupplyPoint | null>(null);
+  const [popup, setPopup] = useState<SupplyPoint | null>(null);
 
-  // Night stop coordinates for filtering shelters/campsites
-  const nightStopCoords = useMemo(() =>
-    daySegments
-      .filter((s) => s.nightStop)
-      .map((s) => ({ lng: s.nightStop!.coord[0], lat: s.nightStop!.coord[1] })),
-    [daySegments]
+  const nightStops = useMemo(
+    () => daySegments.filter((s) => s.nightStop).map((s) => ({ lng: s.nightStop!.coord[0], lat: s.nightStop!.coord[1] })),
+    [daySegments],
   );
 
   const visible = useMemo(() => {
-    const allPoints = [...supplyPoints, ...(showBailOut ? bailOutPoints : [])];
-
-    return allPoints.filter((p) => {
-      // Toggle checks by type
-      if (p.type === 'paczkomat' && !showPaczkomaty) return false;
-      if (['zabka', 'biedronka', 'supermarket', 'convenience', 'shop'].includes(p.type) && !showShops) return false;
-      if (p.type === 'water' && !showWater) return false;
-      if (['campsite', 'alpine_hut', 'basic_shelter'].includes(p.type) && !showCampsites) return false;
-      if (['repair', 'compressed_air'].includes(p.type) && !showRepair) return false;
-      if (['train_station', 'hospital', 'bus_stop'].includes(p.type) && !showBailOut) return false;
-      if (p.type === 'fuel' && !showFuel) return false;
-      if (['bakery', 'cafe', 'restaurant'].includes(p.type) && !showFood) return false;
-      if (p.type === 'pharmacy' && !showPharmacy) return false;
-      if (p.type === 'toilets' && !showToilets) return false;
-      if (p.type === 'halt' && !showHalts) return false;
-
-      // Filter shelters/campsites to only show near predicted night stops
-      if (['campsite', 'alpine_hut', 'basic_shelter'].includes(p.type) && nightStopCoords.length > 0) {
-        const nearNightStop = nightStopCoords.some(
-          (ns) => distanceKm(p.lat, p.lng, ns.lat, ns.lng) <= SHELTER_RADIUS_KM
-        );
-        if (!nearNightStop) return false;
+    const all = [...supplyPoints, ...(layers.bailout ? bailOutPoints : [])];
+    return all.filter((p) => {
+      if (LAYER_TYPES.sleep.has(p.type)) {
+        if (!layers.sleep) return false;
+        return nightStops.length === 0 || nightStops.some((n) => distanceKm(p.lat, p.lng, n.lat, n.lng) <= SHELTER_RADIUS_KM);
       }
-
+      if (LAYER_TYPES.food.has(p.type)) return layers.food;
+      if (LAYER_TYPES.water.has(p.type)) return layers.water;
+      if (LAYER_TYPES.services.has(p.type)) return layers.services;
+      if (LAYER_TYPES.bailout.has(p.type)) return layers.bailout;
       return true;
     });
-  }, [supplyPoints, bailOutPoints, showPaczkomaty, showShops, showWater, showCampsites, showRepair, showBailOut, showFuel, showFood, showPharmacy, showToilets, showHalts, nightStopCoords]);
+  }, [supplyPoints, bailOutPoints, layers, nightStops]);
 
-  const handleToggle = useCallback((pt: SupplyPoint) => {
-    setPopupPoint((prev) => (prev?.id === pt.id ? null : pt));
-  }, []);
+  const toggle = useCallback((pt: SupplyPoint) => setPopup((prev) => (prev?.id === pt.id ? null : pt)), []);
 
   return (
     <>
-      {visible.map((pt) => (
-        <SupplyMarkerItem key={pt.id} pt={pt} onToggle={handleToggle} />
-      ))}
-      {popupPoint && (
-        <Popup
-          latitude={popupPoint.lat}
-          longitude={popupPoint.lng}
-          onClose={() => setPopupPoint(null)}
-          closeOnClick={false}
-          offset={18}
-          className="custom-popup"
-        >
-          <div className="popup-body">
-            <div className="popup-type">
-              {SUPPLY_TYPE_LABELS[popupPoint.type] || popupPoint.type}
-            </div>
-            <strong className="popup-name">{popupPoint.name}</strong>
-            {popupPoint.details?.waterType && (
-              <div className="popup-detail popup-detail--water">
-                {popupPoint.details.waterType.replace('_', ' ')}
-              </div>
-            )}
-            {popupPoint.details?.campsiteType && (
-              <div className="popup-detail popup-detail--campsite">
-                {popupPoint.details.campsiteType.replace('_', ' ')}
-                {popupPoint.details.capacity && ` · ${popupPoint.details.capacity} spots`}
-              </div>
-            )}
-            {popupPoint.details?.repairType && (
-              <div className="popup-detail popup-detail--repair">
-                {popupPoint.details.repairType === 'repair_station' ? 'Self-service station' : 'Bike shop'}
-                {popupPoint.details.phone && ` · ${popupPoint.details.phone}`}
-              </div>
-            )}
-            {popupPoint.details?.hasToilet && (
-              <div className="popup-detail">WC available</div>
-            )}
-            {popupPoint.details?.hasWater && (
-              <div className="popup-detail">Water available</div>
-            )}
-            {popupPoint.details?.address && (
-              <div className="popup-detail popup-detail--address">
-                {popupPoint.details.address}
-              </div>
-            )}
+      {visible.map((pt) => <SupplyMarkerItem key={pt.id} pt={pt} onToggle={toggle} />)}
+      {popup && (
+        <Popup latitude={popup.lat} longitude={popup.lng} onClose={() => setPopup(null)} closeOnClick={false} offset={18} className="custom-popup">
+          <div className="popup">
+            <div className="popup-type">{SUPPLY_TYPE_LABELS[popup.type] || popup.type}</div>
+            <strong>{popup.name}</strong>
+            {popup.details?.openingHours && <div className="popup-line">{popup.details.openingHours}</div>}
+            {popup.details?.address && <div className="popup-line">{popup.details.address}</div>}
             <div className="popup-tags">
-              <span className="popup-tag popup-tag--km">
-                {popupPoint.distanceFromStartKm.toFixed(1)} km
-              </span>
-              {popupPoint.details?.is24h && (
-                <span className="popup-tag popup-tag--24h">
-                  24/7
-                </span>
-              )}
-              {popupPoint.details?.fee === false && (
-                <span className="popup-tag popup-tag--free">
-                  Free
-                </span>
-              )}
+              <span className="tag">{popup.distanceFromStartKm.toFixed(1)} km</span>
+              {popup.details?.is24h && <span className="tag tag-good">24/7</span>}
+              {popup.details?.fee === false && <span className="tag tag-good">free</span>}
+              {isClosedOnNonTradingSunday(popup) && <span className="tag tag-warn">closed non-trading Sundays</span>}
             </div>
           </div>
         </Popup>

@@ -1,164 +1,31 @@
-<p align="center">
-  <img src="banner.svg" alt="Bikepacking Planner" width="100%">
-</p>
+# Bikepacking Planner
 
-<p align="center">
-  <strong>Plan multi-day bikepacking trips with real-time supply discovery, weather forecasts, and smart resupply logistics.</strong>
-</p>
+Plan a multi-day bike trip across Poland and know, for every day, where you can buy food, where the water is, whether the shop will be open when you get there, and what the weather will do.
 
-<p align="center">
-  <a href="https://asdfgh0318.github.io/bikepacking-planner/"><strong>Live app</strong></a>
-</p>
+**Live:** https://asdfgh0318.github.io/bikepacking-planner/
 
-<p align="center">
-  <img src="https://github.com/asdfgh0318/bikepacking-planner/actions/workflows/ci.yml/badge.svg" alt="CI">
-  <img src="https://img.shields.io/badge/react-18.3-61dafb?logo=react&logoColor=white" alt="React">
-  <img src="https://img.shields.io/badge/typescript-5.6-3178c6?logo=typescript&logoColor=white" alt="TypeScript">
-  <img src="https://img.shields.io/badge/maplibre--gl-4.7-396CB2?logo=maplibre&logoColor=white" alt="MapLibre">
-  <img src="https://img.shields.io/badge/vite-5.4-646cff?logo=vite&logoColor=white" alt="Vite">
-  <img src="https://img.shields.io/badge/PWA-offline--ready-5a0fc8?logo=pwa&logoColor=white" alt="PWA">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-</p>
+Runs entirely in the browser. No account, no API keys, no tracking, no WebAssembly. Installable as an app, including in Vanadium on GrapheneOS. Free data sources: BRouter (routing), OpenStreetMap via Overpass (shops, water, campsites, stations), Open-Meteo (forecast), InPost (Paczkomat lockers), OpenFreeMap (tiles).
 
----
+## What it does
 
-A fully client-side web app for planning bikepacking routes across Poland. Combines route planning, OpenStreetMap POI discovery, weather forecasts, gap analysis, and resupply optimization — no account or API keys required.
+1. **Route.** Tap the map to place waypoints, drag to move them, or import a GPX. Three BRouter profiles. Elevation strip with day boundaries. Export GPX with supply points as waypoints, or copy a link that carries the whole route.
+2. **Days.** The route is split into riding days from a daily target. Each day shows distance, climb, hours, difficulty, and the night stop. Sundays are flagged: on a non-trading Sunday the big chains are closed, and the app knows the Polish calendar including the three pre-Christmas Sundays.
+3. **Supply.** Shops, water, campsites, repair and bail-out points within a corridor of the route, cached for a week so a planned trip still shows its shops offline. Gaps without food or water are graded safe, caution, danger, with where to stock up and the nearest off-route alternative.
+4. **Resupply plan.** From your diet and a strategy (auto-picked from shop density), which stop to buy at on which day, the estimated arrival time and whether it will be open, calories and carry weight per day, and warnings. Optional pre-shipping of food to InPost Paczkomat lockers for empty stretches.
+5. **Weather.** Sixteen-day forecast aligned to the trip days, with heat, cold, rain and wind alerts. Hot days tighten the water-gap thresholds.
+6. **It survives.** Route and settings persist across reloads. Map tiles, routes and OpenStreetMap answers are cached by the service worker.
 
-## Features
-
-### Route Planning
-- **Click-to-place waypoints** on an interactive map with drag-to-reorder
-- **GPX import/export** — bring routes from Komoot, Strava, or any GPX source
-- **Three routing profiles** via BRouter: trekking, fastbike, mountain bike
-- **Elevation profile** with ascent/descent stats
-- **Shareable URLs** — encode your entire route in a link
-
-### Supply Point Discovery
-- **23 POI types** detected along your route via Overpass API:
-  - **Shops** — Zabka, Biedronka, supermarkets, convenience stores, bakeries
-  - **Food** — cafes, restaurants
-  - **Water** — springs, drinking fountains, taps, wells
-  - **Accommodation** — campsites, shelters, alpine huts
-  - **Services** — bike repair, pharmacies, toilets, compressed air
-  - **Fuel stations**
-  - **Bail-out points** — train stations, hospitals
-- **Paczkomat (InPost)** locker integration for pre-shipping supplies
-- **Adjustable search corridor** around your route
-- **Offline POI cache** — results kept in IndexedDB for 7 days
-
-### Smart Planning
-- **Gap analysis** — detects dangerous food and water resupply gaps with severity levels (safe / caution / danger)
-- **Auto day splitting** — breaks your route into daily segments based on target distance
-- **5 resupply strategies** — auto, daily-ration, grazer, ultralight, self-sufficient
-- **Paczkomat scoring** — ranks InPost lockers by distance, detour, and timing
-- **Shopping timeline** with day-by-day breakdowns
-- **Sunday-aware planning** — knows Poland's trading-Sunday calendar, so it won't send you to a closed Biedronka
-
-### Weather
-- **16-day forecast** aligned to your trip dates via Open-Meteo
-- **Danger warnings** for heat, cold, heavy rain, and strong wind
-- **Dynamic water model** — adjusts recommended intake based on temperature
-
-### Gear & Diet
-- **Gear tracker** with weight calculator and category breakdown
-- **Diet planner** with 5 profiles: standard, high-energy, ultralight, keto, vegan
-- **Macro tracking** per diet profile
-- **Carry weight curve** visualization with heavy-load warnings
-
-### Offline & PWA
-- Installable as a standalone app on mobile and desktop (tested target: Vanadium on GrapheneOS)
-- Your route and trip settings survive a reload; shops and water come back from the local cache
-- Service worker caches map tiles, routes, and POI data
-- No WebAssembly, no trackers, no accounts — runs in hardened browsers such as Vanadium on GrapheneOS
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + TypeScript |
-| Build | Vite 5 |
-| State | Zustand |
-| Map | MapLibre GL JS + react-map-gl |
-| Tiles | OpenFreeMap (free, no API key) |
-| Routing | BRouter API |
-| POI data | Overpass API (OpenStreetMap) |
-| Weather | Open-Meteo API |
-| Parcels | InPost API |
-| Geo utils | Turf.js |
-| Local cache | IndexedDB |
-| Icons | Lucide React |
-| Toasts | Sonner |
-| Testing | Vitest (unit) + Playwright (E2E) |
-| PWA | vite-plugin-pwa |
-
-**Zero backend.** Everything runs in the browser. All APIs used are free and keyless.
-
-## Getting Started
+## Develop
 
 ```bash
-# Clone
-git clone https://github.com/asdfgh0318/bikepacking-planner.git
-cd bikepacking-planner
-
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
+npm run dev                                       # http://localhost:5173
+npm run lint && npm test                          # ESLint, Vitest
+npx playwright test                               # E2E on its own server, port 5183
+npm run build -- --base=/bikepacking-planner/     # as deployed to GitHub Pages
+npm run icons                                     # regenerate PNG icons from public/icon-192.svg
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Stack: React 18, TypeScript, Vite, MapLibre GL, Zustand, IndexedDB. The planning logic lives in `src/services` and `src/data` and is unit-tested; the UI in `src/components` is thin on purpose.
 
-### Other Commands
-
-```bash
-npm run build      # Production build
-npm run preview    # Preview production build
-npm run test       # Run unit tests
-npm run lint       # Lint with ESLint
-```
-
-## Project Structure
-
-```
-src/
-├── components/
-│   ├── Map/              # MapView, route layer, POI markers, day/weather markers
-│   ├── Sidebar/          # All planning panels (route, supply, resupply, weather, gear, diet)
-│   ├── ElevationProfile  # Elevation chart
-│   ├── Wizard            # Onboarding flow
-│   └── ui/               # Reusable UI components
-├── store/                # Zustand stores (route, supply, resupply, gear, diet, settings)
-├── hooks/                # Data fetching & calculation hooks
-├── services/             # API clients (BRouter, Overpass, InPost, weather, GPX, caching)
-├── types/                # TypeScript interfaces
-├── constants/            # POI definitions, colors, icons
-├── utils/                # Geo helpers, debug logger, fetch retry
-└── config.ts             # Centralized thresholds & configuration
-```
-
-## How It Works
-
-1. **Place waypoints** on the map or import a GPX file
-2. **BRouter** calculates the cycling route between waypoints
-3. **Overpass API** queries OpenStreetMap for supply points within a corridor along the route
-4. **Gap analysis** identifies stretches without food or water resupply
-5. **Day splitter** breaks the route into manageable daily segments
-6. **Resupply planner** suggests what to buy where, including Paczkomat pre-shipping
-7. **Weather forecast** warns about conditions for your planned dates
-
-## APIs Used
-
-All APIs are free and require no authentication:
-
-| API | Purpose |
-|-----|---------|
-| [BRouter](https://brouter.de) | Bicycle routing with elevation |
-| [Overpass API](https://overpass-api.de) | OpenStreetMap POI queries |
-| [Open-Meteo](https://open-meteo.com) | Weather forecasts |
-| [InPost](https://inpost.pl) | Paczkomat locker locations |
-| [OpenFreeMap](https://openfreemap.org) | Map tiles |
-
-## License
-
-MIT
+MIT.
