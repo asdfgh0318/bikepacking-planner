@@ -16,6 +16,7 @@ export function useBailOutFetching(): void {
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
   const enabled = useSupplyStore((s) => s.layers.bailout);
   const setBailOutPoints = useSupplyStore((s) => s.setBailOutPoints);
+  const retryNonce = useSupplyStore((s) => s.retryNonce);
 
   useEffect(() => {
     if (!routeGeometry || !enabled) {
@@ -32,5 +33,5 @@ export function useBailOutFetching(): void {
         });
     }, DEBOUNCE_MS);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [routeGeometry, enabled, corridorWidthKm, setBailOutPoints]);
+  }, [routeGeometry, enabled, corridorWidthKm, retryNonce, setBailOutPoints]);
 }

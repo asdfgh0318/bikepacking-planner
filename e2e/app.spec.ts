@@ -4,6 +4,8 @@ import { test, expect, type Page } from '@playwright/test';
  * Every external host is stubbed: upstream 429/504s and slow tiles are
  * routine and must not decide whether the suite passes.
  */
+const OVERPASS = /https:\/\/(overpass-api\.de|overpass\.kumi\.systems|maps\.mail\.ru)\//;
+
 async function stubNetwork(page: Page) {
   let route: [number, number][] = [];
 
@@ -38,7 +40,7 @@ async function stubNetwork(page: Page) {
   });
 
   // Overpass: a shop and a tap at the middle of whatever BRouter last returned.
-  await page.route(/https:\/\/overpass(-api\.de|\.kumi\.systems)\//, (r) => {
+  await page.route(OVERPASS, (r) => {
     const [lon, lat] = route[Math.floor(route.length / 2)] ?? [19, 52];
     return r.fulfill({
       json: {
@@ -112,6 +114,25 @@ test.describe('Bikepacking Planner', () => {
     }
     // The stubbed shop and tap made it through classification into the panel.
     await expect(page.getByText(/1 food stops, 1 water sources/)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('an OpenStreetMap outage is reported, and Retry recovers', async ({ page }) => {
+    // Overpass reports its own timeouts as HTTP 200 with a remark.
+    let down = true;
+    await page.route(OVERPASS, (r) =>
+      down ? r.fulfill({ json: { remark: 'runtime error: Query timed out', elements: [] } }) : r.fallback());
+
+    await addTwoWaypoints(page);
+    await expect(page.getByText(/Shops and water could not be loaded/)).toBeVisible({ timeout: 15000 });
+    // Unknown is not empty: no gap or running-dry verdicts, no plan.
+    await expect(page.getByText(/without (food|water)/)).toHaveCount(0);
+    await expect(page.getByText(/Running dry/)).toHaveCount(0);
+    await expect(page.getByText('The plan appears once shops along the route are known.')).toBeVisible();
+
+    down = false;
+    await page.getByRole('button', { name: 'Retry' }).click();
+    await expect(page.getByText(/1 food stops, 1 water sources/)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Shops and water could not be loaded/)).toHaveCount(0);
   });
 
   test('routing profile switches', async ({ page }) => {

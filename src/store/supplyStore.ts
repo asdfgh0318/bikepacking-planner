@@ -30,6 +30,10 @@ interface SupplyState {
   corridorWidthKm: number;
   layers: Record<LayerGroup, boolean>;
   isLoading: boolean;
+  /** OpenStreetMap could not be reached for the current route: shops and water are unknown, not absent. */
+  osmFailed: boolean;
+  /** Bumped by `retrySupply` to make the fetch hooks run again for the same route. */
+  retryNonce: number;
 
   setSupplyPoints: (pts: SupplyPoint[]) => void;
   setBailOutPoints: (pts: SupplyPoint[]) => void;
@@ -38,6 +42,8 @@ interface SupplyState {
   setCorridorWidthKm: (km: number) => void;
   toggleLayer: (g: LayerGroup) => void;
   setIsLoading: (v: boolean) => void;
+  setOsmFailed: (v: boolean) => void;
+  retrySupply: () => void;
 }
 
 export const useSupplyStore = create<SupplyState>()(persist((set) => ({
@@ -48,6 +54,8 @@ export const useSupplyStore = create<SupplyState>()(persist((set) => ({
   corridorWidthKm: 2,
   layers: { food: true, water: true, sleep: true, services: false, bailout: true, weather: true },
   isLoading: false,
+  osmFailed: false,
+  retryNonce: 0,
 
   setSupplyPoints: (pts) => set({ supplyPoints: pts }),
   setBailOutPoints: (pts) => set({ bailOutPoints: pts }),
@@ -56,6 +64,8 @@ export const useSupplyStore = create<SupplyState>()(persist((set) => ({
   setCorridorWidthKm: (km) => set({ corridorWidthKm: Math.max(0.5, Math.min(20, km)) }),
   toggleLayer: (g) => set((s) => ({ layers: { ...s.layers, [g]: !s.layers[g] } })),
   setIsLoading: (v) => set({ isLoading: v }),
+  setOsmFailed: (v) => set({ osmFailed: v }),
+  retrySupply: () => set((s) => ({ retryNonce: s.retryNonce + 1 })),
 }), {
   name: 'bikepacking-supply',
   partialize: (s) => ({ corridorWidthKm: s.corridorWidthKm, layers: s.layers }),

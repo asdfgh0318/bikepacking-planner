@@ -26,6 +26,8 @@ export function SupplySection() {
   const supplyGaps = useSupplyStore((s) => s.supplyGaps);
   const waterGaps = useSupplyStore((s) => s.waterGaps);
   const isLoading = useSupplyStore((s) => s.isLoading);
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
+  const retrySupply = useSupplyStore((s) => s.retrySupply);
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
   const setCorridorWidthKm = useSupplyStore((s) => s.setCorridorWidthKm);
   const waterCapacityL = useTripStore((s) => s.waterCapacityL);
@@ -41,13 +43,19 @@ export function SupplySection() {
   const dangers = [...supplyGaps, ...waterGaps].filter((g) => g.severity === 'danger').length;
 
   return (
-    <Section title="Supply" meta={isLoading ? 'searching…' : dangers > 0 ? <span className="tag tag-bad">{dangers} danger</span> : `${food} food · ${water} water`}>
+    <Section title="Supply" meta={isLoading ? 'searching…' : osmFailed ? 'not loaded' : dangers > 0 ? <span className="tag tag-bad">{dangers} danger</span> : `${food} food · ${water} water`}>
       {isLoading && supplyPoints.length === 0 && <p className="note">Searching OpenStreetMap along the route…</p>}
-      {!isLoading && supplyPoints.length === 0 && (
-        <Alert severity="warning">No supply points found. OpenStreetMap may be rate-limiting; try again in a minute or widen the corridor.</Alert>
+      {!isLoading && osmFailed && (
+        <Alert severity="warning">
+          Shops and water could not be loaded: OpenStreetMap is not answering. This is usually temporary.
+          <div><button className="btn" onClick={retrySupply}>Retry</button></div>
+        </Alert>
+      )}
+      {!isLoading && !osmFailed && supplyPoints.length === 0 && (
+        <Alert severity="warning">No supply points found within {corridorWidthKm} km of the route. Try a wider corridor.</Alert>
       )}
       {supplyPoints.length > 0 && (
-        <p className="note">{food} food stops, {water} water sources, {sleep} places to sleep, {lockers} Paczkomaty within {corridorWidthKm} km of the route.</p>
+        <p className="note">{osmFailed ? '' : `${food} food stops, ${water} water sources, ${sleep} places to sleep, `}{lockers} Paczkomaty within {corridorWidthKm} km of the route.</p>
       )}
 
       <GapList gaps={supplyGaps} kind="food" />

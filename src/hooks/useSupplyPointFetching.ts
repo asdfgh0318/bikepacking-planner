@@ -31,6 +31,8 @@ export function useSupplyPointFetching(): void {
   const setSupplyGaps = useSupplyStore((s) => s.setSupplyGaps);
   const setWaterGaps = useSupplyStore((s) => s.setWaterGaps);
   const setIsLoading = useSupplyStore((s) => s.setIsLoading);
+  const setOsmFailed = useSupplyStore((s) => s.setOsmFailed);
+  const retryNonce = useSupplyStore((s) => s.retryNonce);
 
   // Track the current fetch version to discard stale results
   const versionRef = useRef(0);
@@ -47,6 +49,7 @@ export function useSupplyPointFetching(): void {
       setSupplyGaps([]);
       setWaterGaps([]);
       setIsLoading(false);
+      setOsmFailed(false);
       return;
     }
 
@@ -79,24 +82,19 @@ export function useSupplyPointFetching(): void {
           return;
         }
 
-        // Overpass failing (429/504 are routine) is not "no shops here":
-        // say so, and derive no gaps from missing data. Points already
+        // Overpass failing (429/502/504 are routine) is not "no shops here":
+        // say so, offer a retry, and derive no gaps from missing data.
+        // Lockers come from InPost and are still shown. Points already
         // loaded for this same route (another corridor width) are kept.
-        if (overpassResult.status === 'rejected') {
-          toast.error('Failed to load supply points', { description: 'OpenStreetMap may be rate-limiting; try again in a minute' });
-          if (loadedForRef.current !== routeGeometry) {
-            loadedForRef.current = null;
-            setSupplyPoints([]);
-            setSupplyGaps([]);
-            setWaterGaps([]);
-          }
-          return;
+        const osmOk = overpassResult.status === 'fulfilled';
+        setOsmFailed(!osmOk);
+        if (!osmOk) {
+          toast.error('Failed to load shops and water', { description: 'OpenStreetMap is not answering; retry in a minute' });
+          if (loadedForRef.current === routeGeometry) return;
         }
 
-        const supplyPoints: SupplyPoint[] = [];
-
-        // Add Overpass results (already classified, with distanceFromStartKm from cacheManager)
-        supplyPoints.push(...overpassResult.value);
+        // Overpass results are already classified, with distanceFromStartKm from cacheManager
+        const supplyPoints: SupplyPoint[] = overpassResult.status === 'fulfilled' ? [...overpassResult.value] : [];
 
         // Process InPost paczkomaty — still needs corridor filtering (radius-based API)
         if (paczkomatyRaw.status === 'fulfilled') {
@@ -138,8 +136,13 @@ export function useSupplyPointFetching(): void {
           for (const sp of supplyPoints) byType[sp.type] = (byType[sp.type] || 0) + 1;
           debugLog.info('supply', 'points:loaded', { total: supplyPoints.length, ...byType });
 
-          loadedForRef.current = routeGeometry;
+          loadedForRef.current = osmOk ? routeGeometry : null;
           setSupplyPoints(supplyPoints);
+          if (!osmOk) {
+            setSupplyGaps([]);
+            setWaterGaps([]);
+            return;
+          }
 
           // Analyze supply gaps
           const routeStats = useRouteStore.getState().routeStats;
@@ -172,5 +175,5 @@ export function useSupplyPointFetching(): void {
 
     const timer = setTimeout(loadSupplyPoints, DEBOUNCE_MS);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [routeGeometry, corridorWidthKm, setSupplyPoints, setIsLoading, setSupplyGaps, setWaterGaps]);
+  }, [routeGeometry, corridorWidthKm, retryNonce, setSupplyPoints, setIsLoading, setOsmFailed, setSupplyGaps, setWaterGaps]);
 }

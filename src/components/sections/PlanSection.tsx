@@ -20,6 +20,7 @@ export function PlanSection() {
   const daySegments = useRouteStore((s) => s.daySegments);
   const routeStats = useRouteStore((s) => s.routeStats);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
   const plan = useTripStore((s) => s.plan);
   const strategyId = useTripStore((s) => s.strategyId);
   const setStrategyId = useTripStore((s) => s.setStrategyId);
@@ -35,8 +36,9 @@ export function PlanSection() {
   if (daySegments.length === 0) return null;
 
   const points = paczkomat ? supplyPoints : supplyPoints.filter((p) => p.type !== 'paczkomat');
-  const auto = strategyId === 'auto' && routeStats ? autoDetectStrategy(points, routeStats.distanceKm) : null;
-  const strategyText = auto
+  // With OpenStreetMap unreachable the shop count is unknown, not zero.
+  const auto = strategyId === 'auto' && routeStats && !osmFailed ? autoDetectStrategy(points, routeStats.distanceKm) : null;
+  const strategyText = strategyId === 'auto' && !auto ? 'Picks a strategy once shops along the route are known.' : auto
     ? `${RESUPPLY_PRESETS[auto.strategyId].label}: ${auto.reason}`
     : RESUPPLY_PRESETS[strategyId].description;
 

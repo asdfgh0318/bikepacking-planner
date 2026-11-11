@@ -29,6 +29,7 @@ export const INPOST_TIMEOUT_MS = 10_000;
 export const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter', // slow, but up when the two above are not
 ];
 
 // ---------------------------------------------------------------------------

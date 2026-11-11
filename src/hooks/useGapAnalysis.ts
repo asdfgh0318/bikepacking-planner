@@ -17,20 +17,22 @@ export function useGapAnalysis(): void {
   const setWaterGaps = useSupplyStore((s) => s.setWaterGaps);
   const daySegments = useRouteStore((s) => s.daySegments);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+  // OpenStreetMap unreachable: water sources are unknown, so no water verdicts.
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
 
   useEffect(() => {
     const totalDistKm = useRouteStore.getState().routeStats?.distanceKm ?? 0;
-    if (supplyPoints.length === 0 || totalDistKm <= 0) return;
+    if (osmFailed || supplyPoints.length === 0 || totalDistKm <= 0) return;
     // Always recompute: a cooler or missing forecast must relax the gaps
     // that a hot one tightened.
     setWaterGaps(analyzeWaterGaps(supplyPoints, totalDistKm, heatTempForWaterGaps(routeWeather)));
-  }, [routeWeather, supplyPoints, setWaterGaps]);
+  }, [routeWeather, supplyPoints, osmFailed, setWaterGaps]);
 
   useEffect(() => {
-    if (daySegments.length === 0) {
+    if (daySegments.length === 0 || osmFailed) {
       setWaterPlan(null);
       return;
     }
     setWaterPlan(generateWaterPlan(daySegments, supplyPoints, routeWeather, waterCapacityL));
-  }, [routeWeather, waterCapacityL, daySegments, supplyPoints, setWaterPlan]);
+  }, [routeWeather, waterCapacityL, daySegments, supplyPoints, osmFailed, setWaterPlan]);
 }
