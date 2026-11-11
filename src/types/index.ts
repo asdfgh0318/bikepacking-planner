@@ -12,20 +12,6 @@ export interface RouteStats {
   descentM: number;
 }
 
-// Gear & Weight
-export interface GearItem {
-  id: string;
-  name: string;
-  category: 'shelter' | 'sleep' | 'cooking' | 'clothing' | 'tools' | 'electronics' | 'other';
-  weightG: number;
-  packed: boolean;
-}
-
-export interface GearPreset {
-  name: string;
-  items: Omit<GearItem, 'id' | 'packed'>[];
-}
-
 // Diet & Supply Planning
 export type DietType = 'standard' | 'high-energy' | 'ultralight' | 'keto' | 'vegan';
 
@@ -46,16 +32,6 @@ export interface FoodItem {
   category: 'meal' | 'snack' | 'drink' | 'supplement';
   availableAt: ('paczkomat' | 'zabka' | 'biedronka' | 'shop')[];
   estimatedPricePLN?: number;
-}
-
-export interface SupplyOrder {
-  stopId: string;
-  stopName: string;
-  distanceKm: number;
-  dayNumber: number;
-  items: FoodItem[];
-  totalCalories: number;
-  totalWeightG: number;
 }
 
 export interface SupplyPoint {
@@ -89,15 +65,6 @@ export interface SupplyPoint {
 // Supply gap analysis
 export type GapSeverity = 'safe' | 'caution' | 'danger';
 
-export interface GapAlternative {
-  name: string;
-  type: string;
-  lat: number;
-  lng: number;
-  detourKm: number; // round-trip detour distance
-  routeKm: number;  // where on route the detour starts
-}
-
 export interface SupplyGap {
   startKm: number;
   endKm: number;
@@ -105,9 +72,6 @@ export interface SupplyGap {
   severity: GapSeverity;
   fromName: string;
   toName: string;
-  alternatives?: GapAlternative[];
-  stockUpAt?: { name: string; km: number };
-  nextResupply?: { name: string; km: number };
 }
 
 // Night stop suggestion
@@ -175,16 +139,6 @@ export interface ResupplyStrategy {
   carryBufferDays: number;      // extra days of food to carry (0 = just today, 1 = tomorrow too)
   minCalorieReserve: number;    // minimum kcal reserve before buying (0 = buy every stop)
   preferStoreType: string[];    // store preference order
-}
-
-// Trip Context — season/weather adjustments
-export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
-
-export interface TripContext {
-  season: Season;
-  daylightHours: number;       // available riding hours (daylight - 2h buffer)
-  waterMultiplier: number;     // 1.0 = normal, 1.5 = hot summer
-  extraGearWeightG: number;    // additional clothing/insulation weight
 }
 
 // Smart Resupply Pipeline

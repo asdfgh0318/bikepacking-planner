@@ -10,7 +10,6 @@ import type {
   ResupplyWarning,
   ResupplyStrategy,
   ResupplyStrategyId,
-  TripContext,
 } from '../types';
 import { FOOD_DB, calculateDailyCalories } from './diet';
 import { FOOD_TYPES } from './gapAnalysis';
@@ -29,16 +28,21 @@ import {
 } from '../config';
 
 /**
+ * Places where a rider can buy a day's groceries. Lockers hold food only
+ * when a parcel was shipped there; cafes and restaurants serve a meal but
+ * do not restock the bags.
+ */
+const GROCERY_TYPES: readonly string[] = ['zabka', 'biedronka', 'shop', 'supermarket', 'convenience', 'fuel', 'bakery'];
+
+/**
  * Auto-detect the best resupply strategy based on shop density along the route.
- * Filters supply points to food-relevant types and computes shops-per-km density.
+ * Filters supply points to grocery types and computes shops-per-km density.
  */
 export function autoDetectStrategy(
   supplyPoints: SupplyPoint[],
   totalDistanceKm: number,
 ): { strategyId: ResupplyStrategyId; reason: string } {
-  const foodShops = supplyPoints.filter(p =>
-    ['zabka', 'biedronka', 'shop', 'paczkomat'].includes(p.type)
-  );
+  const foodShops = supplyPoints.filter(p => GROCERY_TYPES.includes(p.type));
   const density = totalDistanceKm > 0 ? foodShops.length / totalDistanceKm : 0;
 
   if (density > 0.5) return { strategyId: 'grazer', reason: `${foodShops.length} shops (very dense)` };
@@ -115,7 +119,11 @@ export interface ResupplyConfig {
   avgSpeedKmh: number;
   strategy: ResupplyStrategy;
   tripStartDate?: string; // ISO date e.g. '2026-07-01'
-  tripContext?: TripContext;
+  /**
+   * Pre-shipped parcels the rider collects on the way. Their calories come
+   * off that day's shop purchase and their weight joins the carry curve.
+   */
+  parcelPickups?: { dayNumber: number; distanceKm: number; calories: number; weightG: number }[];
 }
 
 function estimateArrivalHour(
@@ -157,22 +165,20 @@ function selectFoodForStop(
     return (b.calories / b.weightG) - (a.calories / a.weightG);
   });
 
+  // Buy what this store type stocks; if it stocks nothing we know of
+  // (supermarket, bakery, fuel...), fall back to the whole list.
+  const available = sorted.filter((f) => f.availableAt.includes(stopType as FoodItem['availableAt'][number]));
+  const pool = (available.some((f) => f.calories > 0) ? available : sorted).filter((f) => f.calories > 0);
+
   const selected: FoodItem[] = [];
   let totalCals = 0;
 
-  for (const food of sorted) {
-    if (totalCals >= caloriesNeeded) break;
-    // Only pick items available at this store type
-    if (!food.availableAt.includes(stopType as FoodItem['availableAt'][number])) continue;
-    selected.push(food);
-    totalCals += food.calories;
-  }
-
-  // If still short, allow items from any store as fallback
-  if (totalCals < caloriesNeeded * 0.7) {
-    for (const food of sorted) {
+  // One pass over the list is at most ~4600 kcal, less than a riding day
+  // needs, so keep cycling (buying a second, third... of each item) until
+  // the target is met.
+  while (pool.length > 0 && Number.isFinite(caloriesNeeded) && totalCals < caloriesNeeded) {
+    for (const food of pool) {
       if (totalCals >= caloriesNeeded) break;
-      if (selected.includes(food)) continue;
       selected.push(food);
       totalCals += food.calories;
     }
@@ -315,7 +321,9 @@ export function generateResupplyPlan(
 
     // Target calories: today + buffer days
     const bufferCals = strategy.carryBufferDays * avgDailyCals;
-    let targetCals = Math.max(0, segCals + bufferCals - carryCalories);
+    const dayParcels = (config.parcelPickups ?? []).filter((p) => p.dayNumber === seg.dayNumber);
+    const parcelCals = dayParcels.reduce((sum, p) => sum + p.calories, 0);
+    let targetCals = Math.max(0, segCals + bufferCals - carryCalories - parcelCals);
 
     // On non-trading Sundays, add small buffer — Biedronka closed, some stores have reduced hours
     if (isSunday && !isTradingDay) {
@@ -452,6 +460,16 @@ export function generateResupplyPlan(
 
       lastStopKm = stop.distanceFromStartKm;
       stopsUsed++;
+    }
+
+    // Collect today's parcels (in ride order, after the shop stops)
+    for (const parcel of [...dayParcels].sort((a, b) => a.distanceKm - b.distanceKm)) {
+      const pickupKm = Math.min(seg.endKm, Math.max(lastStopKm, parcel.distanceKm));
+      const consumed = consumeFood(carryCalories, carryWeightG, calsPerKm, pickupKm - lastStopKm);
+      carryCalories = consumed.calories + parcel.calories;
+      carryWeightG = consumed.weightG + parcel.weightG;
+      carryWeightCurve.push({ distanceKm: pickupKm, dayNumber: seg.dayNumber, foodWeightG: carryWeightG });
+      lastStopKm = pickupKm;
     }
 
     // Consume from last stop to day end

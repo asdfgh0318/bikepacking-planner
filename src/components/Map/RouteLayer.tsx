@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import type { MapRef } from 'react-map-gl/maplibre';
 import { useRouteStore } from '../../store/routeStore';
 
@@ -56,6 +56,29 @@ export function RouteLayer({ mapRef, mapLoaded }: Props) {
       paint: { 'line-color': '#ef4444', 'line-width': 4, 'line-opacity': 0.9 },
       layout: { 'line-cap': 'round', 'line-join': 'round' },
     });
+  }, [mapRef, mapLoaded, routeGeometry]);
+
+  // Bring the route into view when it arrives whole: a GPX import, a restored
+  // trip, or a shared link. Hand edits never move the camera.
+  const sharedFitted = useRef(false);
+  useEffect(() => {
+    if (!mapLoaded || !routeGeometry) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const { gpxGeometryLoaded, geometryStale, waypoints } = useRouteStore.getState();
+    const shared = !!waypoints[0]?.id.startsWith('shared-');
+    if (!shared) sharedFitted.current = false;
+    if (geometryStale || !(gpxGeometryLoaded || (shared && !sharedFitted.current))) return;
+    if (shared) sharedFitted.current = true;
+
+    let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+    for (const [lng, lat] of routeGeometry.coordinates) {
+      if (lng < west) west = lng;
+      if (lng > east) east = lng;
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+    }
+    map.fitBounds([[west, south], [east, north]], { padding: 40, duration: 0, maxZoom: 14 });
   }, [mapRef, mapLoaded, routeGeometry]);
 
   // Cleanup on unmount — capture the map instance when the effect runs,

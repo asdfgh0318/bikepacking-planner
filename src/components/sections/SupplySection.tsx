@@ -14,8 +14,6 @@ function GapList({ gaps, kind }: { gaps: SupplyGap[]; kind: 'food' | 'water' }) 
       {shown.map((g, i) => (
         <Alert key={i} severity={SEVERITY[g.severity]}>
           <strong>{g.distanceKm.toFixed(0)} km without {kind}</strong> · {g.fromName} → {g.toName}
-          {g.stockUpAt && <div className="note">Stock up at {g.stockUpAt.name} (km {g.stockUpAt.km})</div>}
-          {g.alternatives?.[0] && <div className="note">Off route: {g.alternatives[0].name}, {g.alternatives[0].detourKm} km detour at km {g.alternatives[0].routeKm}</div>}
         </Alert>
       ))}
     </>
@@ -58,7 +56,10 @@ export function SupplySection() {
       <Slider label="Water you carry" value={waterCapacityL} onChange={setWaterCapacityL} min={0.5} max={5} step={0.5} unit=" L" />
       {waterPlan && waterPlan.criticalPoints.map((cp, i) => (
         <Alert key={i} severity="danger">
-          Running dry near km {cp.km} on day {cp.dayNumber}. Nearest water: {cp.nearestSourceName} at km {cp.nearestSourceKm.toFixed(0)}.
+          Running dry near km {cp.km.toFixed(0)} on day {cp.dayNumber}.{' '}
+          {cp.nearestSourceName !== null && cp.nearestSourceKm !== null
+            ? `Nearest water: ${cp.nearestSourceName} at km ${cp.nearestSourceKm.toFixed(0)}.`
+            : 'No water source found on the route: carry more or plan a refill at a shop.'}
         </Alert>
       ))}
       {waterPlan && waterPlan.recommendations.slice(0, 2).map((r, i) => <p key={i} className="note">{r}</p>)}

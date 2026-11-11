@@ -55,45 +55,75 @@ function is24_7String(s: string): boolean {
   return /^(OPEN\s+)?(24\s*\/\s*7|24\s*H(OURS?)?)$/i.test(norm);
 }
 
+const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+/** Public/school holiday selectors: we have no holiday calendar, so they are ignored. */
+const HOLIDAY_TOKEN = /^(PH|SH)$/;
+// "Mo-Fr 08:00-18:00, Sa 08:00-14:00": a comma after a time (or off/closed)
+// and before a letter starts a new rule; "Mo,We 08:00-16:00" and
+// "09:00-13:00,15:00-21:00" are left alone.
+const COMMA_RULE_SEPARATOR = /(?<=\d|off|closed|open)\s*,\s*(?=[A-Za-z])/i;
+
 export function parseOpeningHours(raw: string): ParsedSchedule | null {
   if (!raw) return null;
 
   const trimmed = raw.trim();
   if (is24_7String(trimmed)) return { is24_7: true, ranges: [] };
 
-  const ranges: TimeRange[] = [];
+  let ranges: TimeRange[] = [];
+  let sawRule = false;
 
   // Split by semicolons: "Mo-Fr 06:00-22:00; Sa 07:00-21:00"
   const parts = trimmed.split(';').map((s) => s.trim()).filter(Boolean);
 
   for (const part of parts) {
-    // Skip keyword-only entries like "Tu closed", "Mo open", "PH off"
-    if (/^[A-Za-z,-]+\s+(open|closed|off)$/i.test(part)) continue;
+    const subRules = part.split(COMMA_RULE_SEPARATOR).map((s) => s.trim()).filter(Boolean);
 
-    // Match "Mo-Fr 06:00-22:00" or "Sa 07:00-21:00" or "Mo,We,Fr 08:00-16:00"
-    // Also handles comma-separated time ranges: "Mo-Fr 09:00-13:00,15:00-21:00"
-    const match = part.match(
-      /^([A-Za-z,-]+)\s+([\d:,\s-]+)$/
-    );
-    if (!match) return null;
+    for (let i = 0; i < subRules.length; i++) {
+      // "Mo-Fr 06:00-22:00", "Sa 07:00-21:00", "Mo,We,Fr 08:00-16:00",
+      // "Mo-Fr 09:00-13:00,15:00-21:00", "Su off", or a bare "08:00-20:00".
+      const match = subRules[i].match(/^(?:([A-Za-z,-]+)\s+)?(open|closed|off|[\d:,\s-]+)$/i);
+      if (!match) return null;
 
-    const [, daySpec, timeSpec] = match;
-    const dayParts = daySpec.split(',');
-    const days: number[] = [];
-    for (const dp of dayParts) {
-      days.push(...expandDayRange(dp.trim()));
-    }
-    if (days.length === 0) return null;
+      const [, daySpec, body] = match;
+      let days: number[];
+      if (daySpec === undefined) {
+        days = ALL_DAYS; // no day given means every day
+      } else {
+        const dayParts = daySpec.split(',').map((d) => d.trim());
+        const weekdayParts = dayParts.filter((d) => !HOLIDAY_TOKEN.test(d));
+        // A holiday-only rule ("PH off", "PH 10:00-18:00") says nothing about weekdays.
+        if (weekdayParts.length === 0) continue;
+        days = [];
+        for (const dp of weekdayParts) {
+          const expanded = expandDayRange(dp);
+          if (expanded.length === 0) return null;
+          days.push(...expanded);
+        }
+      }
 
-    const timeRanges = parseTimeRanges(timeSpec);
-    if (timeRanges.length === 0) return null;
+      const keyword = body.toLowerCase();
+      // Keyword-only "Mo open" carries no hours; skipped as before.
+      if (keyword === 'open') continue;
 
-    for (const tr of timeRanges) {
-      ranges.push({ days, open: tr.open, close: tr.close });
+      const isOff = keyword === 'off' || keyword === 'closed';
+      const timeRanges = isOff ? [] : parseTimeRanges(body);
+      if (!isOff && timeRanges.length === 0) return null;
+
+      // OSM semantics: a later rule replaces earlier ones for the days it
+      // names. Comma-joined rules after the first are additive.
+      if (i === 0 || isOff) {
+        ranges = ranges
+          .map((r) => ({ ...r, days: r.days.filter((d) => !days.includes(d)) }))
+          .filter((r) => r.days.length > 0);
+      }
+      for (const tr of timeRanges) {
+        ranges.push({ days: [...days], open: tr.open, close: tr.close });
+      }
+      sawRule = true;
     }
   }
 
-  return ranges.length > 0 ? { is24_7: false, ranges } : null;
+  return sawRule ? { is24_7: false, ranges } : null;
 }
 
 /**
@@ -111,10 +141,15 @@ export function isOpenAt(
   if (!schedule) return null;
   if (schedule.is24_7) return true;
 
+  const previousDay = (dayOfWeek + 6) % 7;
   for (const range of schedule.ranges) {
+    // "18:00-02:00" (or "18:00-26:00") wraps past midnight into the next day.
+    const close = range.close > 24 ? range.close - 24 : range.close;
+    const wraps = close <= range.open;
     if (range.days.includes(dayOfWeek)) {
-      if (hour >= range.open && hour < range.close) return true;
+      if (wraps ? hour >= range.open : hour >= range.open && hour < close) return true;
     }
+    if (wraps && range.days.includes(previousDay) && hour < close) return true;
   }
   return false;
 }

@@ -1,5 +1,7 @@
-import { Marker } from 'react-map-gl/maplibre';
+import { useState } from 'react';
+import { Marker, Popup } from 'react-map-gl/maplibre';
 import { useRouteStore } from '../../store/routeStore';
+import { formatHours } from '../../utils/format';
 import type { Difficulty } from '../../types';
 
 const DIFF_COLORS: Record<Difficulty, string> = {
@@ -8,14 +10,13 @@ const DIFF_COLORS: Record<Difficulty, string> = {
   hard: '#f87171',
 };
 
-function formatHours(h: number) {
-  return `${Math.floor(h)}h${Math.round((h % 1) * 60).toString().padStart(2, '0')}`;
-}
-
 export function DayMarkers() {
   const daySegments = useRouteStore((s) => s.daySegments);
+  const [openDay, setOpenDay] = useState<number | null>(null);
 
   if (daySegments.length <= 1) return null;
+
+  const open = daySegments.find((s) => s.dayNumber === openDay && s.dayNumber > 1);
 
   return (
     <>
@@ -27,10 +28,14 @@ export function DayMarkers() {
             latitude={seg.startCoord[1]}
             longitude={seg.startCoord[0]}
             anchor="center"
+            // Without this the tap reaches the map and adds a waypoint.
+            onClick={(e) => {
+              e.originalEvent.stopPropagation();
+              setOpenDay(openDay === seg.dayNumber ? null : seg.dayNumber);
+            }}
           >
             <div
               className="day-marker"
-              title={`Day ${seg.dayNumber} — ${seg.distanceKm.toFixed(0)} km · ${formatHours(seg.estimatedHours)} · ${seg.difficulty}`}
               style={{
                 width: 26,
                 height: 26,
@@ -44,6 +49,7 @@ export function DayMarkers() {
                 fontWeight: 800,
                 color,
                 boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                cursor: 'pointer',
               }}
             >
               D{seg.dayNumber}
@@ -51,6 +57,14 @@ export function DayMarkers() {
           </Marker>
         );
       })}
+      {open && (
+        <Popup latitude={open.startCoord[1]} longitude={open.startCoord[0]} onClose={() => setOpenDay(null)} closeOnClick={false} offset={16} className="custom-popup">
+          <div className="popup">
+            <strong>Day {open.dayNumber}</strong>
+            <div className="popup-line">{open.distanceKm.toFixed(0)} km · {formatHours(open.estimatedHours)} · {open.difficulty}</div>
+          </div>
+        </Popup>
+      )}
     </>
   );
 }

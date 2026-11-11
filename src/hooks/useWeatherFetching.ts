@@ -15,6 +15,8 @@ export function useWeatherFetching(): void {
   useEffect(() => {
     if (!routeGeometry || daySegments.length === 0 || !tripStartDate) {
       setRouteWeather(null);
+      // The aborted fetch skips its own reset.
+      setIsLoadingWeather(false);
       return;
     }
     const controller = new AbortController();

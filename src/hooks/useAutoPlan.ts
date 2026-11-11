@@ -76,7 +76,9 @@ export function useAutoPlan(): void {
 
   useEffect(() => {
     if (daySegments.length === 0 || supplyPoints.length === 0 || isCalculating || isLoading) {
-      if (daySegments.length === 0) setPlan(null);
+      // No plan can be built from settled inputs: drop the old one rather
+      // than show the previous route's purchases against this route.
+      if (daySegments.length === 0 || (supplyPoints.length === 0 && !isCalculating && !isLoading)) setPlan(null);
       return;
     }
     const timer = setTimeout(() => {

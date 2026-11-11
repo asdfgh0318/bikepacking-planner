@@ -132,18 +132,8 @@ export const PACZKOMAT_PARCEL_TARGET_CALS = 800;
 export const OVERPASS_ROUTE_SAMPLE_POINTS = 80;
 
 // ---------------------------------------------------------------------------
-// GPX
-// ---------------------------------------------------------------------------
-
-/** Maximum waypoints kept when importing a GPX file (downsampled if exceeded). */
-export const MAX_GPX_WAYPOINTS = 50;
-
-// ---------------------------------------------------------------------------
 // POI Cache (IndexedDB)
 // ---------------------------------------------------------------------------
 
 /** POI cache TTL (ms). 7 days for Overpass data. */
 export const POI_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-/** InPost cache TTL (ms). 1 day (locations change more often). */
-export const INPOST_CACHE_TTL_MS = 24 * 60 * 60 * 1000;

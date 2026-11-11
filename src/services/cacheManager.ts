@@ -14,7 +14,7 @@ async function getOrFetch(
   fetcher: Fetcher,
   signal?: AbortSignal,
 ): Promise<SupplyPoint[]> {
-  const cached = await getFreshCachedPOIs(hash, corridorWidthKm, 'overpass').catch(() => null);
+  const cached = await getFreshCachedPOIs(hash, corridorWidthKm).catch(() => null);
   if (cached && cached.length > 0) {
     debugLog.info('cache', 'hit', { count: cached.length, hash: hash.slice(0, 8) });
     return cached;
@@ -31,7 +31,7 @@ async function getOrFetch(
   pois.sort((a, b) => a.distanceFromStartKm - b.distanceFromStartKm);
 
   // Fire and forget — the cache must never block or fail the plan.
-  cachePOIs(hash, corridorWidthKm, pois, 'overpass').catch(() => {});
+  cachePOIs(hash, corridorWidthKm, pois).catch(() => {});
   evictStaleCache().catch(() => {});
 
   return pois;

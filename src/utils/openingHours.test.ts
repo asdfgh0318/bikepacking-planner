@@ -135,3 +135,55 @@ describe('isOpenAt', () => {
     expect(isOpenAt('Mo-Fr 06:00-22:00', 6, 1)).toBe(true);
   });
 });
+
+describe('isOpenAt: overrides, off rules and common OSM forms', () => {
+  it('treats "Su off" and "Su closed" as closed on Sunday', () => {
+    expect(isOpenAt('Mo-Su 06:00-22:00; Su closed', 12, 0)).toBe(false);
+    expect(isOpenAt('Mo-Su 06:00-22:00; Su off', 12, 0)).toBe(false);
+    // other days are untouched
+    expect(isOpenAt('Mo-Su 06:00-22:00; Su off', 12, 1)).toBe(true);
+  });
+
+  it('lets a later rule replace an earlier one for the same day', () => {
+    const schedule = 'Mo-Su 06:00-22:00; Su 10:00-18:00';
+    expect(isOpenAt(schedule, 8, 0)).toBe(false);
+    expect(isOpenAt(schedule, 12, 0)).toBe(true);
+    expect(isOpenAt(schedule, 8, 6)).toBe(true);
+  });
+
+  it('reports a fully closed schedule as closed, not unknown', () => {
+    expect(isOpenAt('Mo-Su off', 12, 3)).toBe(false);
+  });
+
+  it('treats bare times without a day as every day', () => {
+    expect(isOpenAt('08:00-20:00', 12, 1)).toBe(true);
+    expect(isOpenAt('08:00-20:00', 12, 0)).toBe(true);
+    expect(isOpenAt('08:00-20:00', 21, 1)).toBe(false);
+  });
+
+  it('accepts comma-separated rules', () => {
+    const schedule = 'Mo-Fr 08:00-18:00, Sa 08:00-14:00';
+    expect(isOpenAt(schedule, 17, 3)).toBe(true);
+    expect(isOpenAt(schedule, 13, 6)).toBe(true);
+    expect(isOpenAt(schedule, 15, 6)).toBe(false);
+    expect(isOpenAt(schedule, 12, 0)).toBe(false);
+  });
+
+  it('ignores public-holiday rules instead of failing the whole string', () => {
+    const schedule = 'Mo-Sa 06:00-22:00; PH 10:00-18:00';
+    expect(isOpenAt(schedule, 7, 2)).toBe(true);
+    expect(isOpenAt(schedule, 12, 0)).toBe(false);
+    expect(isOpenAt('Mo-Sa,PH 06:00-22:00', 7, 2)).toBe(true);
+    // a holiday-only string tells us nothing about weekdays
+    expect(isOpenAt('PH off', 12, 1)).toBeNull();
+  });
+
+  it('handles ranges that wrap past midnight', () => {
+    expect(isOpenAt('Mo-Su 18:00-02:00', 23, 1)).toBe(true);
+    expect(isOpenAt('Mo-Su 22:00-06:00', 5, 1)).toBe(true);
+    expect(isOpenAt('Mo-Su 22:00-06:00', 12, 1)).toBe(false);
+    // Friday night spills into Saturday morning, but not into Friday morning
+    expect(isOpenAt('Fr 22:00-04:00', 2, 6)).toBe(true);
+    expect(isOpenAt('Fr 22:00-04:00', 2, 5)).toBe(false);
+  });
+});

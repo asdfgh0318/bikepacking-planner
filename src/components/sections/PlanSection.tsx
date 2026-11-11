@@ -4,6 +4,7 @@ import { useTripStore } from '../../store/tripStore';
 import { RESUPPLY_PRESETS, autoDetectStrategy } from '../../services/resupplyPlanner';
 import { DIET_PROFILES } from '../../services/diet';
 import { SUPPLY_BADGE_LETTERS, SUPPLY_COLORS } from '../../constants/supplyTypes';
+import { formatClock } from '../../utils/format';
 import { Section, Segmented, Slider, Toggle, Alert, Stat } from '../ui';
 import type { DietType, ResupplyStrategyId } from '../../types';
 
@@ -14,10 +15,6 @@ const STRATEGIES: { value: ResupplyStrategyId; label: string }[] = [
   { value: 'ultralight', label: 'Light' },
   { value: 'self-sufficient', label: 'Carry' },
 ];
-
-function clock(h: number) {
-  return `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-}
 
 export function PlanSection() {
   const daySegments = useRouteStore((s) => s.daySegments);
@@ -82,7 +79,7 @@ export function PlanSection() {
                 {day.stops.map((s, i) => (
                   <div key={`${s.stopId}-${i}`} className="row stop">
                     <span className="badge" style={{ background: (SUPPLY_COLORS[s.stopType] || SUPPLY_COLORS.shop).bg }}>{s.source === 'paczkomat' ? 'P' : SUPPLY_BADGE_LETTERS[s.stopType] || 'S'}</span>
-                    <span className="grow">{s.stopName}<small> km {s.distanceKm.toFixed(0)} · ~{clock(s.estimatedArrivalHour)} · {s.totalCalories} kcal</small></span>
+                    <span className="grow">{s.stopName}<small> km {s.distanceKm.toFixed(0)} · ~{formatClock(s.estimatedArrivalHour)} · {s.totalCalories} kcal</small></span>
                     {s.isOpenOnArrival === false && <span className="tag tag-bad">closed</span>}
                     {s.isOpenOnArrival === true && <span className="tag tag-good">open</span>}
                   </div>

@@ -1,21 +1,18 @@
-import { POI_CACHE_TTL_MS, INPOST_CACHE_TTL_MS } from '../config';
+import { POI_CACHE_TTL_MS } from '../config';
 import type { SupplyPoint } from '../types';
 
 /**
  * POI cache on plain IndexedDB.
  *
- * One record per (route hash, corridor width, source) query, holding the
+ * One record per (route hash, corridor width) query, holding the
  * classified supply points and a fetch timestamp. No WASM, no SQL — this has
  * to be fast and cheap on phones whose browsers interpret WebAssembly
  * (Vanadium on GrapheneOS runs WASM without JIT).
  */
 
-export type CacheSource = 'overpass' | 'inpost';
-
 interface CacheRecord {
   id: string;
   routeHash: string;
-  source: CacheSource;
   fetchedAt: number;
   ttlMs: number;
   pois: SupplyPoint[];
@@ -62,8 +59,9 @@ async function withStore<T>(
   return requestToPromise(fn(db.transaction(STORE, mode).objectStore(STORE)));
 }
 
-function queryId(routeHash: string, corridorWidthKm: number, source: CacheSource): string {
-  return `${routeHash}|${corridorWidthKm}|${source}`;
+function queryId(routeHash: string, corridorWidthKm: number): string {
+  // The suffix predates the removal of a second source; kept so existing caches stay valid.
+  return `${routeHash}|${corridorWidthKm}|overpass`;
 }
 
 function isFresh(rec: CacheRecord, now = Date.now()): boolean {
@@ -74,10 +72,9 @@ function isFresh(rec: CacheRecord, now = Date.now()): boolean {
 export async function getFreshCachedPOIs(
   routeHash: string,
   corridorWidthKm: number,
-  source: CacheSource = 'overpass',
 ): Promise<SupplyPoint[] | null> {
   const rec = await withStore<CacheRecord | undefined>('readonly', (s) =>
-    s.get(queryId(routeHash, corridorWidthKm, source)) as IDBRequest<CacheRecord | undefined>,
+    s.get(queryId(routeHash, corridorWidthKm)) as IDBRequest<CacheRecord | undefined>,
   );
   return rec && isFresh(rec) ? rec.pois : null;
 }
@@ -87,14 +84,12 @@ export async function cachePOIs(
   routeHash: string,
   corridorWidthKm: number,
   pois: SupplyPoint[],
-  source: CacheSource,
 ): Promise<void> {
   const rec: CacheRecord = {
-    id: queryId(routeHash, corridorWidthKm, source),
+    id: queryId(routeHash, corridorWidthKm),
     routeHash,
-    source,
     fetchedAt: Date.now(),
-    ttlMs: source === 'inpost' ? INPOST_CACHE_TTL_MS : POI_CACHE_TTL_MS,
+    ttlMs: POI_CACHE_TTL_MS,
     pois,
   };
   await withStore('readwrite', (s) => s.put(rec));

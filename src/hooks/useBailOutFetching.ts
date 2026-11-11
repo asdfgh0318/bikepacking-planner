@@ -6,9 +6,11 @@ import { debugLog } from '../utils/debugLogger';
 
 /**
  * Bail-out points (stations, halts, hospitals) in a wider corridor, only
- * while that layer is on. No abort signal for Overpass — see
- * useSupplyPointFetching for why; stale results are dropped instead.
+ * while that layer is on. Debounced and abortable like
+ * useSupplyPointFetching, so superseded queries are cancelled.
  */
+const DEBOUNCE_MS = 600;
+
 export function useBailOutFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
   const corridorWidthKm = useSupplyStore((s) => s.corridorWidthKm);
@@ -20,10 +22,15 @@ export function useBailOutFetching(): void {
       setBailOutPoints([]);
       return;
     }
-    let cancelled = false;
-    getOrFetchBailOutPOIs(routeGeometry, corridorWidthKm)
-      .then((points) => { if (!cancelled) setBailOutPoints(points); })
-      .catch((err) => debugLog.error('bailout', 'fetch failed', err instanceof Error ? err.message : String(err)));
-    return () => { cancelled = true; };
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      getOrFetchBailOutPOIs(routeGeometry, corridorWidthKm, controller.signal)
+        .then((points) => { if (!controller.signal.aborted) setBailOutPoints(points); })
+        .catch((err) => {
+          if (controller.signal.aborted) return;
+          debugLog.error('bailout', 'fetch failed', err instanceof Error ? err.message : String(err));
+        });
+    }, DEBOUNCE_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [routeGeometry, enabled, corridorWidthKm, setBailOutPoints]);
 }

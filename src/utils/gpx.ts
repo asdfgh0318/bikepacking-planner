@@ -9,40 +9,50 @@ export function parseGPX(gpxString: string): {
   const doc = parser.parseFromString(gpxString, 'text/xml');
   const geojson = gpx(doc);
 
-  const waypoints: Waypoint[] = [];
-  let geometry: GeoJSON.LineString | null = null;
-
-  for (const feature of geojson.features) {
-    if (
-      feature.geometry.type === 'LineString' ||
-      feature.geometry.type === 'MultiLineString'
-    ) {
-      // Take the first linestring
-      const coords =
-        feature.geometry.type === 'MultiLineString'
-          ? feature.geometry.coordinates[0]
-          : feature.geometry.coordinates;
-
-      geometry = { type: 'LineString', coordinates: coords };
-
-      // Sample waypoints from the track (start, every ~50km, end)
-      const totalPoints = coords.length;
-      const sampleCount = Math.max(2, Math.min(10, Math.floor(totalPoints / 20)));
-      const step = Math.floor(totalPoints / (sampleCount - 1));
-
-      for (let i = 0; i < sampleCount; i++) {
-        const idx = Math.min(i * step, totalPoints - 1);
-        const [lng, lat] = coords[idx];
-        waypoints.push({
-          id: `gpx-${i}`,
-          lat,
-          lng,
-        });
-      }
-    }
+  // One route line: every segment of every track, in document order. A
+  // file may hold one track per day, or a recording split by pauses. Routes
+  // (<rte>) are used only when the file has no tracks, so a file carrying
+  // both forms of the same path is not doubled.
+  const lines = geojson.features.filter(
+    (f) => f.geometry?.type === 'LineString' || f.geometry?.type === 'MultiLineString',
+  );
+  const tracks = lines.filter((f) => f.properties?._gpxType === 'trk');
+  const coords: GeoJSON.Position[] = [];
+  for (const feature of tracks.length > 0 ? tracks : lines) {
+    const g = feature.geometry;
+    if (g.type === 'LineString') coords.push(...g.coordinates);
+    else if (g.type === 'MultiLineString') for (const seg of g.coordinates) coords.push(...seg);
   }
+  if (coords.length < 2) return { waypoints: [], geometry: null };
 
-  return { waypoints, geometry };
+  return { waypoints: sampleWaypoints(coords), geometry: { type: 'LineString', coordinates: thinTrack(coords) } };
+}
+
+/**
+ * A 1 Hz multi-day recording runs to hundreds of thousands of points: more
+ * than localStorage holds and far more than the plan or the map can use.
+ */
+export const MAX_TRACK_POINTS = 5000;
+
+/** Evenly thin a track to at most `max` points, keeping the first and last. */
+export function thinTrack(coords: GeoJSON.Position[], max = MAX_TRACK_POINTS): GeoJSON.Position[] {
+  if (coords.length <= max) return coords;
+  const out: GeoJSON.Position[] = [];
+  for (let i = 0; i < max; i++) out.push(coords[Math.round((i * (coords.length - 1)) / (max - 1))]);
+  return out;
+}
+
+function sampleWaypoints(coords: GeoJSON.Position[]): Waypoint[] {
+
+  // Sample waypoints evenly by index; first and last point always included.
+  const n = coords.length;
+  const sampleCount = Math.max(2, Math.min(10, Math.floor(n / 20)));
+  const waypoints: Waypoint[] = [];
+  for (let i = 0; i < sampleCount; i++) {
+    const [lng, lat] = coords[Math.round((i * (n - 1)) / (sampleCount - 1))];
+    waypoints.push({ id: `gpx-${i}`, lat, lng });
+  }
+  return waypoints;
 }
 
 export function readFileAsText(file: File): Promise<string> {

@@ -7,7 +7,6 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Bikepacking Planner',
         short_name: 'BikeNav',
@@ -52,21 +51,6 @@ export default defineConfig({
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            // Cache Overpass API responses
-            urlPattern: /^https:\/\/overpass-api\.de\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'overpass-api',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 7 * 24 * 60 * 60,
               },
               cacheableResponse: {
                 statuses: [0, 200],

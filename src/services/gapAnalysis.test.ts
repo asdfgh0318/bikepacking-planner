@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeSupplyGaps, analyzeWaterGaps } from './gapAnalysis';
+import { analyzeSupplyGaps, analyzeWaterGaps, heatTempForWaterGaps } from './gapAnalysis';
 import type { SupplyPoint } from '../types';
 
 function makePoint(overrides: Partial<SupplyPoint> & { id: string; distanceFromStartKm: number; type: string }): SupplyPoint {
@@ -238,5 +238,30 @@ describe('analyzeWaterGaps', () => {
     // All between-stop gaps are 10km (below minBetweenGap of 15), so none reported
     // Edge gaps: 5km from start (below minEdgeGap of 10) and 5km to end (below 10)
     expect(gaps).toHaveLength(0);
+  });
+});
+
+// ─── heatTempForWaterGaps ────────────────────────────────────────────
+
+describe('heatTempForWaterGaps', () => {
+  const weather = (...temps: number[]) => ({ days: temps.map((tempMax) => ({ tempMax })) });
+
+  it('returns the hottest day when it is above the heat threshold', () => {
+    expect(heatTempForWaterGaps(weather(24, 33, 28))).toBe(33);
+  });
+
+  it('returns undefined (base thresholds) for a cool or missing forecast', () => {
+    expect(heatTempForWaterGaps(weather(24, 30))).toBeUndefined();
+    expect(heatTempForWaterGaps(weather(0, 0))).toBeUndefined();
+    expect(heatTempForWaterGaps(weather())).toBeUndefined();
+    expect(heatTempForWaterGaps(null)).toBeUndefined();
+  });
+
+  it('lets a cooler forecast relax gaps that a hot one tightened', () => {
+    const points = [makePoint({ id: 'w', distanceFromStartKm: 0, type: 'water' })];
+    const hot = analyzeWaterGaps(points, 35, heatTempForWaterGaps(weather(36)));
+    const cool = analyzeWaterGaps(points, 35, heatTempForWaterGaps(weather(22)));
+    expect(hot[0].severity).toBe('danger');
+    expect(cool[0].severity).toBe('caution');
   });
 });

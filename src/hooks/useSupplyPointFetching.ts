@@ -4,8 +4,8 @@ import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { fetchPaczkomaty } from '../services/inpost';
 import { getOrFetchSupplyPOIs } from '../services/cacheManager';
-import { analyzeSupplyGaps, analyzeWaterGaps, enrichGapsWithSuggestions } from '../services/gapAnalysis';
-import { bufferRoute, isPointInCorridor, getDistanceAlongRoute, getRouteBounds } from '../utils/geo';
+import { analyzeSupplyGaps, analyzeWaterGaps } from '../services/gapAnalysis';
+import { projectOnRoute } from '../utils/geo';
 import { debugLog } from '../utils/debugLogger';
 import type { SupplyPoint } from '../types';
 
@@ -13,14 +13,16 @@ import type { SupplyPoint } from '../types';
  * Fetches supply points (Overpass POIs + InPost paczkomaty) when route or
  * corridor changes. Overpass fetching is delegated to the cacheManager which
  * handles caching, classification, and distance calculation. InPost results
- * are still fetched via bbox and corridor-filtered here. After merging, runs
- * gap analysis and day splitting.
+ * are fetched around points along the route and corridor-filtered here.
+ * After merging, runs gap analysis and day splitting.
  *
- * The Overpass fetch does not take the abort signal: React StrictMode's
- * double-mount aborts the first controller before the request fires. Stale
- * results are discarded by the version counter instead; only the InPost
- * call is aborted.
+ * The effect is debounced and both fetches take the abort signal, so a
+ * superseded query (corridor slider drag, quick route edits) is cancelled
+ * instead of running through its retry and failover chain. Stale results
+ * are also discarded by the version counter.
  */
+const DEBOUNCE_MS = 600;
+
 export function useSupplyPointFetching(): void {
   const routeGeometry = useRouteStore((s) => s.routeGeometry);
 
@@ -32,25 +34,34 @@ export function useSupplyPointFetching(): void {
 
   // Track the current fetch version to discard stale results
   const versionRef = useRef(0);
+  // The geometry the points currently in the store were loaded for.
+  const loadedForRef = useRef<GeoJSON.LineString | null>(null);
 
   useEffect(() => {
     if (!routeGeometry) {
+      // Bump the version so an in-flight fetch for the old route cannot
+      // write its results back after the route is gone.
+      versionRef.current++;
+      loadedForRef.current = null;
       setSupplyPoints([]);
+      setSupplyGaps([]);
+      setWaterGaps([]);
+      setIsLoading(false);
       return;
     }
 
     const controller = new AbortController();
     const version = ++versionRef.current;
 
+    setIsLoading(true);
+
     async function loadSupplyPoints() {
-      setIsLoading(true);
       debugLog.info('supply', 'fetch:start', { corridorWidthKm, version });
       try {
         // Overpass (via cache manager) and InPost in parallel
-        const bounds = getRouteBounds(routeGeometry!, corridorWidthKm + 1);
         const [overpassResult, paczkomatyRaw] = await Promise.allSettled([
-          getOrFetchSupplyPOIs(routeGeometry!, corridorWidthKm),
-          fetchPaczkomaty(bounds, controller.signal),
+          getOrFetchSupplyPOIs(routeGeometry!, corridorWidthKm, controller.signal),
+          fetchPaczkomaty(routeGeometry!, corridorWidthKm, controller.signal),
         ]);
 
         // Log results
@@ -63,27 +74,39 @@ export function useSupplyPointFetching(): void {
         if (paczkomatyRaw.status === 'rejected') debugLog.error('supply', 'fetch:paczkomaty:fail', String(paczkomatyRaw.reason));
 
         // Discard stale results — a newer fetch has started
-        if (version !== versionRef.current) {
+        if (version !== versionRef.current || controller.signal.aborted) {
           debugLog.debug('supply', 'fetch:stale', { version, current: versionRef.current });
+          return;
+        }
+
+        // Overpass failing (429/504 are routine) is not "no shops here":
+        // say so, and derive no gaps from missing data. Points already
+        // loaded for this same route (another corridor width) are kept.
+        if (overpassResult.status === 'rejected') {
+          toast.error('Failed to load supply points', { description: 'OpenStreetMap may be rate-limiting; try again in a minute' });
+          if (loadedForRef.current !== routeGeometry) {
+            loadedForRef.current = null;
+            setSupplyPoints([]);
+            setSupplyGaps([]);
+            setWaterGaps([]);
+          }
           return;
         }
 
         const supplyPoints: SupplyPoint[] = [];
 
         // Add Overpass results (already classified, with distanceFromStartKm from cacheManager)
-        if (overpassResult.status === 'fulfilled') {
-          supplyPoints.push(...overpassResult.value);
-        }
+        supplyPoints.push(...overpassResult.value);
 
-        // Process InPost paczkomaty — still needs corridor filtering (bbox-based API)
+        // Process InPost paczkomaty — still needs corridor filtering (radius-based API)
         if (paczkomatyRaw.status === 'fulfilled') {
-          const corridor = bufferRoute(routeGeometry!, corridorWidthKm);
           for (const p of paczkomatyRaw.value) {
             try {
               const lat = p?.location?.latitude;
               const lng = p?.location?.longitude;
               if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) continue;
-              if (isPointInCorridor(lat, lng, corridor)) {
+              const { distKm, alongKm } = projectOnRoute(routeGeometry!, lat, lng);
+              if (distKm <= corridorWidthKm) {
                 const addressStr = p.address
                   ? `${p.address.line1 ?? ''}, ${p.address.line2 ?? ''}`.trim()
                   : '';
@@ -93,9 +116,7 @@ export function useSupplyPointFetching(): void {
                   lat,
                   lng,
                   type: 'paczkomat',
-                  distanceFromStartKm: getDistanceAlongRoute(
-                    routeGeometry!, lat, lng
-                  ),
+                  distanceFromStartKm: alongKm,
                   details: {
                     address: addressStr,
                     is24h: p.location_247,
@@ -117,6 +138,7 @@ export function useSupplyPointFetching(): void {
           for (const sp of supplyPoints) byType[sp.type] = (byType[sp.type] || 0) + 1;
           debugLog.info('supply', 'points:loaded', { total: supplyPoints.length, ...byType });
 
+          loadedForRef.current = routeGeometry;
           setSupplyPoints(supplyPoints);
 
           // Analyze supply gaps
@@ -125,15 +147,13 @@ export function useSupplyPointFetching(): void {
           // A locker is only food if a parcel was shipped to it; the shipping
           // plan handles that case, so gaps are measured shop to shop.
           const shopsOnly = supplyPoints.filter((p) => p.type !== 'paczkomat');
-          const rawGaps = analyzeSupplyGaps(shopsOnly, totalDistKm);
-          const gaps = enrichGapsWithSuggestions(rawGaps, shopsOnly, corridorWidthKm);
+          const gaps = analyzeSupplyGaps(shopsOnly, totalDistKm);
           setSupplyGaps(gaps);
           const wGaps = analyzeWaterGaps(supplyPoints, totalDistKm);
           setWaterGaps(wGaps);
           debugLog.info('supply', 'gaps:analyzed', {
             foodGaps: gaps.length, foodDangers: gaps.filter(g => g.severity === 'danger').length,
             waterGaps: wGaps.length, waterDangers: wGaps.filter(g => g.severity === 'danger').length,
-            gapsWithAlternatives: gaps.filter(g => g.alternatives && g.alternatives.length > 0).length,
           });
 
           // useDaySplitting re-runs automatically once supplyPoints changes,
@@ -150,7 +170,7 @@ export function useSupplyPointFetching(): void {
       }
     }
 
-    loadSupplyPoints();
-    return () => { controller.abort(); };
+    const timer = setTimeout(loadSupplyPoints, DEBOUNCE_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [routeGeometry, corridorWidthKm, setSupplyPoints, setIsLoading, setSupplyGaps, setWaterGaps]);
 }

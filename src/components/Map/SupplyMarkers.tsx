@@ -1,11 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Marker, Popup } from 'react-map-gl/maplibre';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Marker, Popup, useMap } from 'react-map-gl/maplibre';
 import type { MarkerEvent } from 'react-map-gl/maplibre';
 import { useSupplyStore, LAYER_TYPES } from '../../store/supplyStore';
 import { useRouteStore } from '../../store/routeStore';
 import { SUPPLY_COLORS, SUPPLY_ICONS, SUPPLY_TYPE_LABELS } from '../../constants/supplyTypes';
 import { distanceKm } from '../../utils/distance';
 import { isClosedOnNonTradingSunday } from '../../data/sundayTrading';
+import { cullMarkers, type MapView } from './markerCulling';
 import type { SupplyPoint } from '../../types';
 
 /** Campsites and shelters only matter near where you'll actually sleep. */
@@ -35,6 +36,20 @@ export function SupplyMarkers() {
   const layers = useSupplyStore((s) => s.layers);
   const daySegments = useRouteStore((s) => s.daySegments);
   const [popup, setPopup] = useState<SupplyPoint | null>(null);
+  const { current: map } = useMap();
+  const [view, setView] = useState<MapView | null>(null);
+
+  // Track the settled viewport (not every move frame) to cull markers by it.
+  useEffect(() => {
+    if (!map) return;
+    const update = () => {
+      const b = map.getBounds();
+      setView({ zoom: map.getZoom(), west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() });
+    };
+    update();
+    map.on('moveend', update);
+    return () => { map.off('moveend', update); };
+  }, [map]);
 
   const nightStops = useMemo(
     () => daySegments.filter((s) => s.nightStop).map((s) => ({ lng: s.nightStop!.coord[0], lat: s.nightStop!.coord[1] })),
@@ -43,7 +58,7 @@ export function SupplyMarkers() {
 
   const visible = useMemo(() => {
     const all = [...supplyPoints, ...(layers.bailout ? bailOutPoints : [])];
-    return all.filter((p) => {
+    return cullMarkers(all, view).filter((p) => {
       if (LAYER_TYPES.sleep.has(p.type)) {
         if (!layers.sleep) return false;
         return nightStops.length === 0 || nightStops.some((n) => distanceKm(p.lat, p.lng, n.lat, n.lng) <= SHELTER_RADIUS_KM);
@@ -54,7 +69,7 @@ export function SupplyMarkers() {
       if (LAYER_TYPES.bailout.has(p.type)) return layers.bailout;
       return true;
     });
-  }, [supplyPoints, bailOutPoints, layers, nightStops]);
+  }, [supplyPoints, bailOutPoints, layers, nightStops, view]);
 
   const toggle = useCallback((pt: SupplyPoint) => setPopup((prev) => (prev?.id === pt.id ? null : pt)), []);
 

@@ -164,3 +164,46 @@ describe('splitRouteIntoDays', () => {
     expect(days).toHaveLength(1);
   });
 });
+
+describe('splitRouteIntoDays: day-end alignment', () => {
+  const geometry = makeLineString(240, 300);
+
+  function supply(id: string, km: number, type: SupplyPoint['type']): SupplyPoint {
+    return { id, name: id, lat: 51, lng: 19, type, distanceFromStartKm: km };
+  }
+
+  it.each(['toilets', 'pharmacy', 'compressed_air', 'repair', 'paczkomat'] as const)(
+    'does not move the day end for a %s',
+    (type) => {
+      const days = splitRouteIntoDays(geometry, 80, [supply('x', 68, type)]);
+      expect(days[0].endKm).toBe(80);
+    },
+  );
+
+  it('still ends the day at a shop or water source near the target', () => {
+    expect(splitRouteIntoDays(geometry, 80, [supply('s', 68, 'supermarket')])[0].endKm).toBe(68);
+    expect(splitRouteIntoDays(geometry, 80, [supply('w', 85, 'water')])[0].endKm).toBe(85);
+  });
+
+  it('ends the day at the campsite even when another point is closer to the target', () => {
+    const days = splitRouteIntoDays(geometry, 80, [
+      supply('shop', 79, 'zabka'),
+      supply('camp', 89, 'campsite'),
+    ]);
+    expect(days[0].endKm).toBe(89);
+    expect(days[0].nightStop?.campsite?.id).toBe('camp');
+    expect(days[0].nightStop?.distanceFromStartKm).toBe(days[0].endKm);
+    expect(days[1].startKm).toBe(89);
+  });
+
+  it('ends a short day at a campsite its night stop would name', () => {
+    // 40 km target: the generic 20% radius is 8 km, the campsite is 9 km on
+    const days = splitRouteIntoDays(geometry, 40, [supply('camp', 49, 'campsite')]);
+    expect(days[0].endKm).toBe(49);
+    expect(days[0].nightStop?.campsite?.id).toBe('camp');
+  });
+
+  it('is unchanged without supply points', () => {
+    expect(splitRouteIntoDays(geometry, 80, [])[0].endKm).toBe(80);
+  });
+});

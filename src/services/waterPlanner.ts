@@ -10,9 +10,10 @@ export interface WaterCriticalPoint {
   km: number;
   dayNumber: number;
   liters: number;
-  nearestSourceName: string;
-  nearestSourceKm: number;
-  distanceToSource: number;
+  /** null when the route has no known water source at all. */
+  nearestSourceName: string | null;
+  nearestSourceKm: number | null;
+  distanceToSource: number | null;
 }
 
 export interface WaterPlan {
@@ -62,6 +63,8 @@ export function generateWaterPlan(
 
     const segmentKms = seg.endKm - seg.startKm;
     const consumptionPerKm = (consumptionRate * seg.estimatedHours) / segmentKms;
+    // One critical point per dry stretch, not one per km of it.
+    let inDryStretch = false;
 
     // Walk km by km through this segment
     for (let km = seg.startKm; km <= seg.endKm; km += 1) {
@@ -74,10 +77,10 @@ export function generateWaterPlan(
         if (currentWater < waterCapacityL * 0.8) {
           // Worth recommending a refill
           const nextSource = waterSources.find(s => s.distanceFromStartKm > km + 1);
-          const distToNext = nextSource ? nextSource.distanceFromStartKm - km : 999;
-          recommendations.push(
-            `Fill up at km ${km.toFixed(0)} (${source.name}) — next source ${distToNext.toFixed(0)}km away`
-          );
+          const nextText = nextSource
+            ? `next source ${(nextSource.distanceFromStartKm - km).toFixed(0)}km away`
+            : 'no further water source on the route';
+          recommendations.push(`Fill up at km ${km.toFixed(0)} (${source.name}) — ${nextText}`);
         }
         currentWater = waterCapacityL; // refill
         refillCount++;
@@ -94,22 +97,24 @@ export function generateWaterPlan(
       });
 
       // Check critical level
-      if (currentWater < CRITICAL_WATER_L) {
+      if (currentWater >= CRITICAL_WATER_L) {
+        inDryStretch = false;
+      } else if (!inDryStretch) {
+        inDryStretch = true;
         const nearest = waterSources.reduce((best, s) => {
           const dist = Math.abs(s.distanceFromStartKm - km);
           return !best || dist < best.dist ? { source: s, dist } : best;
         }, null as { source: SupplyPoint; dist: number } | null);
 
-        if (nearest) {
-          criticalPoints.push({
-            km,
-            dayNumber: seg.dayNumber,
-            liters: currentWater,
-            nearestSourceName: nearest.source.name,
-            nearestSourceKm: nearest.source.distanceFromStartKm,
-            distanceToSource: nearest.dist,
-          });
-        }
+        // Running dry with no source anywhere is the worst case: still alert.
+        criticalPoints.push({
+          km,
+          dayNumber: seg.dayNumber,
+          liters: currentWater,
+          nearestSourceName: nearest?.source.name ?? null,
+          nearestSourceKm: nearest?.source.distanceFromStartKm ?? null,
+          distanceToSource: nearest?.dist ?? null,
+        });
       }
     }
 
