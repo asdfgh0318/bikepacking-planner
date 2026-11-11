@@ -4,6 +4,7 @@ import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { calculateRoute } from '../services/brouter';
 import { debugLog } from '../utils/debugLogger';
+import { lineStats } from '../utils/geo';
 
 /**
  * Handles route calculation when waypoints or routing profile change.
@@ -24,7 +25,10 @@ export function useRouteCalculation(): void {
 
   // Recalculate route when waypoints change
   useEffect(() => {
+    // Both early returns must reset the flag: an aborted in-flight request
+    // skips its own reset, and nothing else would clear it.
     if (waypoints.length < 2) {
+      setIsCalculating(false);
       setRouteGeometry(null);
       setRouteStats(null);
       setSupplyPoints([]);
@@ -34,6 +38,7 @@ export function useRouteCalculation(): void {
     // Geometry came from a GPX file or was restored from storage: keep it.
     // The store clears the flag when the user edits waypoints or the profile.
     if (gpxGeometryLoaded) {
+      setIsCalculating(false);
       debugLog.info('route', 'calc:skip', 'geometry already loaded, skipping BRouter');
       return;
     }
@@ -58,7 +63,10 @@ export function useRouteCalculation(): void {
           type: 'LineString',
           coordinates: waypoints.map((w) => [w.lng, w.lat]),
         };
-        setRouteGeometry(geom);
+        // A stand-in, not a route: give it its own stats and keep it
+        // non-authoritative so the next load retries BRouter.
+        setRouteGeometry(geom, false);
+        setRouteStats(lineStats(geom.coordinates));
       } finally {
         if (!controller.signal.aborted) {
           setIsCalculating(false);

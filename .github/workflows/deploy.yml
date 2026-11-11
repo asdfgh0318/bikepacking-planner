@@ -23,6 +23,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Deploy runs independently of ci.yml, so gate it here: a red main must not ship.
+      - run: npm run lint
+      - run: npm test
       - run: npm run build -- --base=/bikepacking-planner/
       - uses: actions/upload-pages-artifact@v3
         with:

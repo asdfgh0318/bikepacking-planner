@@ -1,12 +1,9 @@
 import { useRouteStore } from '../../store/routeStore';
 import { useTripStore } from '../../store/tripStore';
 import { tripDayDate, formatShortDate, weekday } from '../../utils/date';
+import { formatHours } from '../../utils/format';
 import { isTradingSunday } from '../../data/sundayTrading';
 import { Section, Slider } from '../ui';
-
-function hours(h: number) {
-  return `${Math.floor(h)}h${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-}
 
 /** Sunday status for a trip day: null on weekdays. */
 function sundayNote(iso: string | null): { text: string; bad: boolean } | null {
@@ -43,7 +40,7 @@ export function DaysSection() {
               <div className="grow">
                 <div className="row">
                   <strong>{seg.distanceKm.toFixed(0)} km</strong>
-                  <span>{hours(seg.estimatedHours)}</span>
+                  <span>{formatHours(seg.estimatedHours)}</span>
                   <span className="note">+{seg.ascentM.toFixed(0)} / −{seg.descentM.toFixed(0)} m</span>
                   {iso && <span className="note">{formatShortDate(iso)}</span>}
                 </div>

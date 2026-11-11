@@ -1,5 +1,21 @@
 import { lineString, length, along, point, distance } from '@turf/turf';
 import type { DaySegment, Difficulty, NightStop, SupplyPoint, RoutingProfile } from '../types';
+import { FOOD_TYPES } from './gapAnalysis';
+
+/** How far from the day end findNightStop looks for a campsite (km). */
+const NIGHT_STOP_RADIUS_KM = 10;
+
+/**
+ * Supply points worth ending a day at when there is no campsite nearby:
+ * other shelter, somewhere to buy food, or water. Toilets, pharmacies,
+ * repair stands, lockers etc. are no reason to move the day boundary.
+ */
+const DAY_END_TYPES: readonly string[] = [
+  'alpine_hut',
+  'basic_shelter',
+  'water',
+  ...FOOD_TYPES.filter((t) => t !== 'paczkomat'),
+];
 
 // Base speeds by routing profile (km/h, loaded bikepacking)
 // Source: bikepacking.com pace data, surface type research
@@ -55,7 +71,7 @@ function findNightStop(
   }
 
   // Search for campsites within 10km of the day end
-  const searchRadius = 10;
+  const searchRadius = NIGHT_STOP_RADIUS_KM;
   const nearbyCampsites = supplyPoints
     .filter(
       (sp) =>
@@ -117,16 +133,30 @@ export function splitRouteIntoDays(
 
     let bestEnd = targetEnd;
 
-    // Find closest supply point to target end
-    const nearbySupply = supplyPoints
-      .filter((sp) => sp.distanceFromStartKm >= minEnd && sp.distanceFromStartKm <= maxEnd)
-      .sort(
-        (a, b) =>
-          Math.abs(a.distanceFromStartKm - targetEnd) - Math.abs(b.distanceFromStartKm - targetEnd)
-      );
+    // Closest point of the given kind to the target end, inside the window.
+    const closest = (matches: (sp: SupplyPoint) => boolean, radiusKm: number) =>
+      supplyPoints
+        .filter(
+          (sp) =>
+            matches(sp) &&
+            sp.distanceFromStartKm >= minEnd &&
+            sp.distanceFromStartKm <= maxEnd &&
+            Math.abs(sp.distanceFromStartKm - targetEnd) < radiusKm
+        )
+        .sort(
+          (a, b) =>
+            Math.abs(a.distanceFromStartKm - targetEnd) - Math.abs(b.distanceFromStartKm - targetEnd)
+        )[0];
 
-    if (nearbySupply.length > 0 && Math.abs(nearbySupply[0].distanceFromStartKm - targetEnd) < searchRadius) {
-      bestEnd = nearbySupply[0].distanceFromStartKm;
+    // A campsite wins: the day ends where the rider sleeps, so the night
+    // stop reported below is the day end itself and not a place km away.
+    // Otherwise end at the nearest shelter / food / water, if any.
+    const dayEndPoint =
+      closest((sp) => sp.type === 'campsite', Math.max(searchRadius, NIGHT_STOP_RADIUS_KM)) ??
+      closest((sp) => DAY_END_TYPES.includes(sp.type), searchRadius);
+
+    if (dayEndPoint) {
+      bestEnd = dayEndPoint.distanceFromStartKm;
     }
 
     // Don't create tiny last segments — merge into current day

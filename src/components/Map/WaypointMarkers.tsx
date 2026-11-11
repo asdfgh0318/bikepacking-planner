@@ -21,7 +21,7 @@ export function WaypointMarkers() {
         const isStart = i === 0;
         const isEnd = i === waypoints.length - 1 && waypoints.length > 1;
         const color = isStart ? '#4ade80' : isEnd ? '#f87171' : '#ffffff';
-        const textColor = isStart || isEnd ? '#fff' : '#1e293b';
+        const textColor = isStart || isEnd ? '#0f172a' : '#1e293b';
         const label = isStart ? 'A' : isEnd ? 'B' : String(i + 1);
         const size = isStart || isEnd ? 32 : 26;
 
@@ -74,13 +74,11 @@ export function WaypointMarkers() {
             offset={20}
             className="custom-popup"
           >
-            <div style={{ fontFamily: '-apple-system, sans-serif' }}>
+            <div className="popup">
               <strong>Waypoint {i + 1}</strong>
-              <br />
-              <span style={{ color: '#666', fontSize: 12 }}>
+              <span className="popup-line">
                 {wp.lat.toFixed(4)}, {wp.lng.toFixed(4)}
               </span>
-              <br />
               <button
                 onClick={() => {
                   removeWaypoint(wp.id);
@@ -88,6 +86,7 @@ export function WaypointMarkers() {
                 }}
                 style={{
                   marginTop: 6,
+                  alignSelf: 'flex-start',
                   cursor: 'pointer',
                   background: '#fee2e2',
                   color: '#dc2626',

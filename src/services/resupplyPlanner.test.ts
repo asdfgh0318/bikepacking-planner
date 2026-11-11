@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateResupplyPlan, RESUPPLY_PRESETS } from './resupplyPlanner';
+import { generateResupplyPlan, autoDetectStrategy, RESUPPLY_PRESETS } from './resupplyPlanner';
+import { DIET_PROFILES, calculateDailyCalories } from './diet';
 import type { ResupplyConfig } from './resupplyPlanner';
 import type {
   DaySegment,
@@ -1541,5 +1542,72 @@ describe('generateResupplyPlan', () => {
         expect(typeof preset.description).toBe('string');
       }
     });
+  });
+});
+
+describe('autoDetectStrategy', () => {
+  it('counts supermarkets, convenience stores, bakeries and fuel stations as shops', () => {
+    const points: SupplyPoint[] = [
+      ...Array.from({ length: 40 }, (_, i) => makeSupplyPoint(`s${i}`, i * 7, 'supermarket')),
+      makeSupplyPoint('z', 150, 'zabka'),
+    ];
+    const result = autoDetectStrategy(points, 300);
+    expect(result.reason).toContain('41 shops');
+    expect(result.reason).not.toContain('very sparse');
+  });
+
+  it('picks daily-ration for a normally stocked route of generic shops', () => {
+    const points: SupplyPoint[] = Array.from({ length: 30 }, (_, i) =>
+      makeSupplyPoint(`c${i}`, i * 3, i % 2 ? 'convenience' : 'bakery'));
+    expect(autoDetectStrategy(points, 100).strategyId).toBe('daily-ration');
+  });
+
+  it('does not count lockers, cafes or restaurants', () => {
+    const points: SupplyPoint[] = [
+      ...Array.from({ length: 60 }, (_, i) => makeSupplyPoint(`p${i}`, i, 'paczkomat')),
+      ...Array.from({ length: 20 }, (_, i) => makeSupplyPoint(`c${i}`, i, 'cafe')),
+      ...Array.from({ length: 20 }, (_, i) => makeSupplyPoint(`r${i}`, i, 'restaurant')),
+    ];
+    const result = autoDetectStrategy(points, 100);
+    expect(result.strategyId).toBe('self-sufficient');
+    expect(result.reason).toContain('0 shops');
+  });
+});
+
+describe('purchase size is not capped by the food list', () => {
+  const segments = [0, 1, 2].map((i) =>
+    makeDaySegment({ dayNumber: i + 1, startKm: i * 80, endKm: (i + 1) * 80, ascentM: 500 }));
+  const stops = [
+    makeSupplyPoint('z1', 20, 'zabka'),
+    makeSupplyPoint('z2', 100, 'zabka'),
+    makeSupplyPoint('z3', 180, 'zabka'),
+  ];
+
+  it.each(['standard', 'high-energy', 'ultralight'] as const)('%s diet: purchases cover what the rider burns', (diet) => {
+    const profile = DIET_PROFILES[diet];
+    const need = calculateDailyCalories(profile, 80, 500);
+    const plan = generateResupplyPlan(profile, segments, stops, [], makeConfig());
+    expect(plan.purchases).toHaveLength(3);
+    // Day 1 starts with empty bags, so the first purchase is a full day.
+    expect(plan.purchases[0].totalCalories).toBeGreaterThanOrEqual(need);
+    // Later days top up what is left; over the trip the rider buys what the
+    // 220 km after the first shop burn (2.75 days), not 3 x one pass of the list.
+    expect(plan.totalCalories).toBeGreaterThanOrEqual(need * 2.5);
+    expect(plan.warnings.filter((w) => w.type === 'calorie_deficit')).toHaveLength(0);
+  });
+
+  it('covers the need at a generic supermarket too', () => {
+    const profile = DIET_PROFILES.standard;
+    const need = calculateDailyCalories(profile, 80, 500);
+    const plan = generateResupplyPlan(profile, segments.slice(0, 1), [makeSupplyPoint('s', 20, 'supermarket')], [], makeConfig());
+    expect(plan.purchases[0].totalCalories).toBeGreaterThanOrEqual(need);
+  });
+
+  it('self-sufficient buys more than daily-ration', () => {
+    const profile = DIET_PROFILES.standard;
+    const daily = generateResupplyPlan(profile, segments, stops, [], makeConfig({ strategy: RESUPPLY_PRESETS['daily-ration'] }));
+    const carry = generateResupplyPlan(profile, segments, stops, [], makeConfig({ strategy: RESUPPLY_PRESETS['self-sufficient'] }));
+    expect(carry.purchases[0].totalCalories).toBeGreaterThan(daily.purchases[0].totalCalories * 1.5);
+    expect(carry.maxCarryWeightG).toBeGreaterThan(daily.maxCarryWeightG);
   });
 });

@@ -1,42 +1,4 @@
-import type { Waypoint, RouteStats } from '../types';
-
-const STORAGE_KEY = 'bikepacking-saved-routes';
-
-export interface SavedRoute {
-  id: string;
-  name: string;
-  savedAt: string;
-  waypoints: Waypoint[];
-  routeStats: RouteStats | null;
-  dailyTargetKm: number;
-  corridorWidthKm: number;
-}
-
-export function getSavedRoutes(): SavedRoute[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function saveRoute(route: Omit<SavedRoute, 'id' | 'savedAt'>): SavedRoute {
-  const routes = getSavedRoutes();
-  const saved: SavedRoute = {
-    ...route,
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    savedAt: new Date().toISOString(),
-  };
-  routes.unshift(saved);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(routes));
-  return saved;
-}
-
-export function deleteRoute(id: string) {
-  const routes = getSavedRoutes().filter((r) => r.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(routes));
-}
+import type { Waypoint } from '../types';
 
 /**
  * Encode route waypoints into a URL-safe string for sharing.
@@ -53,8 +15,14 @@ export function encodeRouteToHash(name: string, waypoints: Waypoint[]): string {
 export function decodeRouteFromHash(hash: string): { name: string; waypoints: Waypoint[] } | null {
   try {
     const data = JSON.parse(atob(hash));
+    // The result is persisted, so a malformed link must not get through.
+    const valid = Array.isArray(data?.w) && data.w.every((c: unknown) =>
+      Array.isArray(c) && c.length >= 2 &&
+      Number.isFinite(c[0]) && Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 90 && Math.abs(c[1]) <= 180);
+    if (!valid) return null;
     return {
-      name: data.n || 'Shared Route',
+      name: typeof data.n === 'string' && data.n ? data.n : 'Shared Route',
       waypoints: (data.w as number[][]).map((coords, i) => ({
         id: `shared-${i}`,
         lat: coords[0],

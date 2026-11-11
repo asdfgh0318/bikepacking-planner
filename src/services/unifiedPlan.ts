@@ -28,25 +28,38 @@ export function generateUnifiedPlan(
     ? generateShippingPlan(daySegments, supplyPoints, profile, paczkomatConfig)
     : null;
 
-  // Step 2: Generate smart resupply plan
+  // Step 2: Generate smart resupply plan. A locker is not a shop: it holds
+  // food only if a parcel was shipped there, and those are merged in below.
   const resupply = generateResupplyPlan(
     profile,
     daySegments,
-    supplyPoints,
+    supplyPoints.filter((p) => p.type !== 'paczkomat'),
     supplyGaps,
-    resupplyConfig
+    {
+      ...resupplyConfig,
+      parcelPickups: shipping?.parcels.map((parcel) => ({
+        dayNumber: parcel.dayNumber,
+        distanceKm: parcel.targetPaczkomat.distanceFromStartKm,
+        calories: parcel.totalCalories,
+        weightG: parcel.totalWeightG,
+      })),
+    }
   );
 
   // Step 3: Merge into parcel pickups as purchases
   if (shipping) {
     for (const parcel of shipping.parcels) {
+      const seg = daySegments.find((d) => d.dayNumber === parcel.dayNumber);
+      const kmIntoDay = seg
+        ? Math.min(seg.endKm, Math.max(seg.startKm, parcel.targetPaczkomat.distanceFromStartKm)) - seg.startKm
+        : 0;
       resupply.purchases.push({
         stopId: parcel.targetPaczkomat.id,
         stopName: parcel.targetPaczkomat.name,
         stopType: 'paczkomat',
         distanceKm: parcel.targetPaczkomat.distanceFromStartKm,
         dayNumber: parcel.dayNumber,
-        estimatedArrivalHour: 0, // Paczkomat pickup time is flexible
+        estimatedArrivalHour: resupplyConfig.rideStartHour + kmIntoDay / resupplyConfig.avgSpeedKmh,
         isOpenOnArrival: parcel.targetPaczkomat.details?.is24h ?? null,
         items: parcel.items,
         totalCalories: parcel.totalCalories,

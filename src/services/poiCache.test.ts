@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { getFreshCachedPOIs, cachePOIs, evictStaleCache, clearCache } from './poiCache';
-import { POI_CACHE_TTL_MS, INPOST_CACHE_TTL_MS } from '../config';
+import { POI_CACHE_TTL_MS } from '../config';
 import type { SupplyPoint } from '../types';
 
 const poi = (id: string): SupplyPoint => ({
@@ -13,45 +13,42 @@ describe('poiCache (IndexedDB)', () => {
   afterEach(() => { vi.useRealTimers(); });
 
   it('returns null on a miss', async () => {
-    expect(await getFreshCachedPOIs('h', 2, 'overpass')).toBeNull();
+    expect(await getFreshCachedPOIs('h', 2)).toBeNull();
   });
 
   it('round-trips POIs for the exact query key', async () => {
-    await cachePOIs('h', 2, [poi('a'), poi('b')], 'overpass');
-    expect(await getFreshCachedPOIs('h', 2, 'overpass')).toEqual([poi('a'), poi('b')]);
-    expect(await getFreshCachedPOIs('h', 3, 'overpass')).toBeNull();
-    expect(await getFreshCachedPOIs('h', 2, 'inpost')).toBeNull();
+    await cachePOIs('h', 2, [poi('a'), poi('b')]);
+    expect(await getFreshCachedPOIs('h', 2)).toEqual([poi('a'), poi('b')]);
+    expect(await getFreshCachedPOIs('h', 3)).toBeNull();
   });
 
   it('replaces the previous record for the same query', async () => {
-    await cachePOIs('h', 2, [poi('a')], 'overpass');
-    await cachePOIs('h', 2, [poi('z')], 'overpass');
-    expect(await getFreshCachedPOIs('h', 2, 'overpass')).toEqual([poi('z')]);
+    await cachePOIs('h', 2, [poi('a')]);
+    await cachePOIs('h', 2, [poi('z')]);
+    expect(await getFreshCachedPOIs('h', 2)).toEqual([poi('z')]);
   });
 
-  it('expires by source-specific TTL', async () => {
+  it('expires after the TTL', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-06-01T00:00:00Z'));
-    await cachePOIs('h', 2, [poi('a')], 'overpass');
-    await cachePOIs('h', 2, [poi('p')], 'inpost');
+    await cachePOIs('h', 2, [poi('a')]);
 
-    vi.setSystemTime(Date.now() + INPOST_CACHE_TTL_MS + 1);
-    expect(await getFreshCachedPOIs('h', 2, 'inpost')).toBeNull();
-    expect(await getFreshCachedPOIs('h', 2, 'overpass')).toEqual([poi('a')]);
+    vi.setSystemTime(Date.now() + POI_CACHE_TTL_MS - 1000);
+    expect(await getFreshCachedPOIs('h', 2)).toEqual([poi('a')]);
 
-    vi.setSystemTime(Date.now() + POI_CACHE_TTL_MS);
-    expect(await getFreshCachedPOIs('h', 2, 'overpass')).toBeNull();
+    vi.setSystemTime(Date.now() + 1001);
+    expect(await getFreshCachedPOIs('h', 2)).toBeNull();
   });
 
   it('evicts only stale records', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-06-01T00:00:00Z'));
-    await cachePOIs('old', 2, [poi('a')], 'overpass');
+    await cachePOIs('old', 2, [poi('a')]);
     vi.setSystemTime(Date.now() + POI_CACHE_TTL_MS + 1);
-    await cachePOIs('new', 2, [poi('b')], 'overpass');
+    await cachePOIs('new', 2, [poi('b')]);
 
     expect(await evictStaleCache()).toBe(1);
-    expect(await getFreshCachedPOIs('new', 2, 'overpass')).toEqual([poi('b')]);
+    expect(await getFreshCachedPOIs('new', 2)).toEqual([poi('b')]);
     expect(await evictStaleCache()).toBe(0);
   });
 });

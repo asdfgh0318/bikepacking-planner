@@ -66,6 +66,7 @@ export function useAutoPlan(): void {
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
   const supplyGaps = useSupplyStore((s) => s.supplyGaps);
   const isLoading = useSupplyStore((s) => s.isLoading);
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
   const tripStartDate = useTripStore((s) => s.tripStartDate);
   const rideStartHour = useTripStore((s) => s.rideStartHour);
   const avgSpeedKmh = useTripStore((s) => s.avgSpeedKmh);
@@ -75,8 +76,13 @@ export function useAutoPlan(): void {
   const setPlan = useTripStore((s) => s.setPlan);
 
   useEffect(() => {
-    if (daySegments.length === 0 || supplyPoints.length === 0 || isCalculating || isLoading) {
-      if (daySegments.length === 0) setPlan(null);
+    // With OpenStreetMap unreachable the shops are unknown, and a plan built
+    // from lockers alone would read as "nothing to buy on this route".
+    const noShops = supplyPoints.length === 0 || osmFailed;
+    if (daySegments.length === 0 || noShops || isCalculating || isLoading) {
+      // No plan can be built from settled inputs: drop the old one rather
+      // than show the previous route's purchases against this route.
+      if (daySegments.length === 0 || (noShops && !isCalculating && !isLoading)) setPlan(null);
       return;
     }
     const timer = setTimeout(() => {
@@ -90,7 +96,7 @@ export function useAutoPlan(): void {
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [
-    daySegments, routeStats, isCalculating, supplyPoints, supplyGaps, isLoading,
+    daySegments, routeStats, isCalculating, supplyPoints, supplyGaps, isLoading, osmFailed,
     tripStartDate, rideStartHour, avgSpeedKmh, strategyId, diet, paczkomatShipping, setPlan,
   ]);
 }

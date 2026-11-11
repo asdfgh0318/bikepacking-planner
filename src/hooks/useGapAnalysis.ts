@@ -2,10 +2,8 @@ import { useEffect } from 'react';
 import { useRouteStore } from '../store/routeStore';
 import { useSupplyStore } from '../store/supplyStore';
 import { useTripStore } from '../store/tripStore';
-import { analyzeWaterGaps } from '../services/gapAnalysis';
+import { analyzeWaterGaps, heatTempForWaterGaps } from '../services/gapAnalysis';
 import { generateWaterPlan } from '../services/waterPlanner';
-
-const HEAT_THRESHOLD_C = 30;
 
 /**
  * Secondary analyses that depend on weather: heat-tightened water gaps and
@@ -19,21 +17,22 @@ export function useGapAnalysis(): void {
   const setWaterGaps = useSupplyStore((s) => s.setWaterGaps);
   const daySegments = useRouteStore((s) => s.daySegments);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+  // OpenStreetMap unreachable: water sources are unknown, so no water verdicts.
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
 
   useEffect(() => {
-    if (!routeWeather) return;
     const totalDistKm = useRouteStore.getState().routeStats?.distanceKm ?? 0;
-    if (supplyPoints.length === 0 || totalDistKm <= 0) return;
-    const maxTempC = Math.max(...routeWeather.days.map((d) => d.tempMax));
-    if (maxTempC <= HEAT_THRESHOLD_C) return;
-    setWaterGaps(analyzeWaterGaps(supplyPoints, totalDistKm, maxTempC));
-  }, [routeWeather, supplyPoints, setWaterGaps]);
+    if (osmFailed || supplyPoints.length === 0 || totalDistKm <= 0) return;
+    // Always recompute: a cooler or missing forecast must relax the gaps
+    // that a hot one tightened.
+    setWaterGaps(analyzeWaterGaps(supplyPoints, totalDistKm, heatTempForWaterGaps(routeWeather)));
+  }, [routeWeather, supplyPoints, osmFailed, setWaterGaps]);
 
   useEffect(() => {
-    if (daySegments.length === 0) {
+    if (daySegments.length === 0 || osmFailed) {
       setWaterPlan(null);
       return;
     }
     setWaterPlan(generateWaterPlan(daySegments, supplyPoints, routeWeather, waterCapacityL));
-  }, [routeWeather, waterCapacityL, daySegments, supplyPoints, setWaterPlan]);
+  }, [routeWeather, waterCapacityL, daySegments, supplyPoints, osmFailed, setWaterPlan]);
 }

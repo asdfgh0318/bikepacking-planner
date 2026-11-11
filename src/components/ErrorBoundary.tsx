@@ -38,6 +38,19 @@ export default class ErrorBoundary extends Component<Props, State> {
           <div style={s.msg}>{this.state.error?.message || 'An unexpected error occurred.'}</div>
           <button style={s.btn} onClick={() => window.location.reload()}>Reload App</button>
           <br />
+          {/* A bad persisted trip would crash again on every reload. */}
+          <button
+            style={{ ...s.btn, background: '#334155' }}
+            onClick={() => {
+              try {
+                for (const key of ['bikepacking-route', 'bikepacking-trip', 'bikepacking-supply']) localStorage.removeItem(key)
+              } catch { /* no storage */ }
+              window.location.reload()
+            }}
+          >
+            Reset saved trip
+          </button>
+          <br />
           <button style={s.toggle} onClick={() => this.setState(p => ({ showDetails: !p.showDetails }))}>
             {this.state.showDetails ? 'Hide details' : 'Show details'}
           </button>

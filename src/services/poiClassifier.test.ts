@@ -12,7 +12,7 @@ function makeWay(id: number, tags: Record<string, string>, lat = 52.0, lon = 21.
 describe('classifyElement', () => {
   describe('brand detection', () => {
     it('classifies Żabka by wikidata ID', () => {
-      const el = makeNode(1, { 'brand:wikidata': 'Q2874810', name: 'Żabka' });
+      const el = makeNode(1, { 'brand:wikidata': 'Q2589061', name: 'Żabka' });
       const result = classifyElement(el);
       expect(result?.type).toBe('zabka');
       expect(result?.name).toBe('Żabka');
@@ -20,22 +20,79 @@ describe('classifyElement', () => {
     });
 
     it('classifies Biedronka by wikidata ID', () => {
-      const el = makeNode(2, { 'brand:wikidata': 'Q857855', name: 'Biedronka' });
+      const el = makeNode(2, { 'brand:wikidata': 'Q857182', name: 'Biedronka' });
       const result = classifyElement(el);
       expect(result?.type).toBe('biedronka');
     });
 
     it('classifies Lidl by wikidata ID', () => {
-      const el = makeNode(3, { 'brand:wikidata': 'Q111', name: 'Lidl' });
+      const el = makeNode(3, { 'brand:wikidata': 'Q151954', name: 'Lidl' });
       const result = classifyElement(el);
       expect(result?.type).toBe('supermarket');
       expect(result?.details?.brand).toBe('Lidl');
     });
 
     it('classifies Dino by wikidata ID', () => {
-      const el = makeNode(4, { 'brand:wikidata': 'Q2462707', name: 'Dino' });
+      const el = makeNode(4, { 'brand:wikidata': 'Q11694239', name: 'Dino' });
       const result = classifyElement(el);
       expect(result?.type).toBe('supermarket');
+    });
+  });
+
+  describe('real OSM brand tagging', () => {
+    it('flags a real Biedronka as closed on non-trading Sundays', () => {
+      const result = classifyElement(makeNode(5, { shop: 'supermarket', 'brand:wikidata': 'Q857182', name: 'Biedronka' }));
+      expect(result?.type).toBe('biedronka');
+      expect(result?.details?.closedOnNonTradingSunday).toBe(true);
+    });
+
+    it.each([
+      ['Q151954', 'Lidl'],
+      ['Q758603', 'Auchan'],
+      ['Q685967', 'Kaufland'],
+      ['Q11694239', 'Dino'],
+      ['Q552652', 'Netto'],
+      ['Q9345945', 'Stokrotka'],
+      ['Q11821937', 'Polomarket'],
+      ['Q217599', 'Carrefour'],
+      ['Q41171373', 'Aldi'],
+      ['Q3153200', 'Intermarché'],
+    ])('flags %s (%s) as closed on non-trading Sundays', (id, brand) => {
+      const result = classifyElement(makeNode(6, { shop: 'supermarket', 'brand:wikidata': id }));
+      expect(result?.details?.brand).toBe(brand);
+      expect(result?.details?.closedOnNonTradingSunday).toBe(true);
+    });
+
+    it('keeps franchise chains (Żabka, Lewiatan) open on Sundays', () => {
+      const zabka = classifyElement(makeNode(7, { shop: 'convenience', 'brand:wikidata': 'Q2589061' }));
+      expect(zabka?.type).toBe('zabka');
+      expect(zabka?.details?.closedOnNonTradingSunday).toBeUndefined();
+      const lewiatan = classifyElement(makeNode(8, { shop: 'supermarket', 'brand:wikidata': 'Q11755396' }));
+      expect(lewiatan?.details?.brand).toBe('Lewiatan');
+      expect(lewiatan?.details?.closedOnNonTradingSunday).toBeUndefined();
+    });
+
+    it('falls back to the name or brand tag when brand:wikidata is missing', () => {
+      const biedronka = classifyElement(makeNode(9, { shop: 'supermarket', name: 'Biedronka' }));
+      expect(biedronka?.type).toBe('biedronka');
+      expect(biedronka?.details?.closedOnNonTradingSunday).toBe(true);
+      const zabka = classifyElement(makeNode(10, { shop: 'convenience', name: 'Żabka' }));
+      expect(zabka?.type).toBe('zabka');
+      const lidl = classifyElement(makeNode(11, { shop: 'supermarket', brand: 'Lidl', name: 'Lidl Polska' }));
+      expect(lidl?.details?.closedOnNonTradingSunday).toBe(true);
+      // An ID the registry does not list must not block the name fallback.
+      const oldId = classifyElement(makeNode(12, { shop: 'supermarket', 'brand:wikidata': 'Q999999999', name: 'Biedronka' }));
+      expect(oldId?.details?.closedOnNonTradingSunday).toBe(true);
+    });
+
+    it('does not apply the name fallback to non-shops or small franchise formats', () => {
+      const fuel = classifyElement(makeNode(12, { amenity: 'fuel', name: 'Auchan' }));
+      expect(fuel?.type).toBe('fuel');
+      const express = classifyElement(makeNode(13, { shop: 'convenience', name: 'Carrefour Express' }));
+      expect(express?.type).toBe('convenience');
+      expect(express?.details?.closedOnNonTradingSunday).toBeUndefined();
+      const local = classifyElement(makeNode(14, { shop: 'supermarket', name: 'Delikatesy Dinozaur' }));
+      expect(local?.details?.closedOnNonTradingSunday).toBeUndefined();
     });
   });
 
@@ -284,7 +341,7 @@ describe('classifyElement', () => {
     });
 
     it('brand takes priority over generic shop type', () => {
-      const el = makeNode(93, { shop: 'convenience', 'brand:wikidata': 'Q2874810', name: 'Żabka', brand: 'Żabka' });
+      const el = makeNode(93, { shop: 'convenience', 'brand:wikidata': 'Q2589061', name: 'Żabka', brand: 'Żabka' });
       const result = classifyElement(el);
       expect(result?.type).toBe('zabka'); // brand match, not convenience
     });

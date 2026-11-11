@@ -1,56 +1,72 @@
-import { lineString, buffer, point, booleanPointInPolygon, nearestPointOnLine, bbox } from '@turf/turf';
 import { distanceKm as distanceKm_ } from './distance';
 
-export function bufferRoute(
-  routeGeometry: GeoJSON.LineString,
-  corridorWidthKm: number
-): GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> {
-  const line = lineString(routeGeometry.coordinates);
-  return buffer(line, corridorWidthKm, { units: 'kilometers' }) as GeoJSON.Feature<
-    GeoJSON.Polygon | GeoJSON.MultiPolygon
-  >;
+const EARTH_RADIUS_KM = 6371.0088; // same sphere turf uses, so km match the day splitter
+const RAD = Math.PI / 180;
+
+function haversineKm(a: GeoJSON.Position, b: GeoJSON.Position): number {
+  const dLat = (b[1] - a[1]) * RAD;
+  const dLng = (b[0] - a[0]) * RAD;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * RAD) * Math.cos(b[1] * RAD) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
 }
 
-export function isPointInCorridor(
-  lat: number,
-  lng: number,
-  corridor: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>
-): boolean {
-  const pt = point([lng, lat]);
-  return booleanPointInPolygon(pt, corridor);
+/** Route km at each vertex, computed once per geometry object. */
+const cumulativeCache = new WeakMap<GeoJSON.LineString, Float64Array>();
+function cumulativeKm(route: GeoJSON.LineString): Float64Array {
+  let cum = cumulativeCache.get(route);
+  if (!cum) {
+    const c = route.coordinates;
+    cum = new Float64Array(c.length);
+    for (let i = 1; i < c.length; i++) cum[i] = cum[i - 1] + haversineKm(c[i - 1], c[i]);
+    cumulativeCache.set(route, cum);
+  }
+  return cum;
 }
 
-export function getDistanceAlongRoute(
+/**
+ * Nearest point on the route: how far off it the point lies and how far along
+ * it. One pass of flat-earth arithmetic centred on the point — exact enough
+ * for anything near the route, and far-off segments only need to lose. This
+ * runs per POI (thousands of lockers on a city route), where turf's
+ * nearestPointOnLine cost ~15 ms a call on a long line.
+ */
+export function projectOnRoute(
   routeGeometry: GeoJSON.LineString,
   lat: number,
   lng: number
-): number {
-  const line = lineString(routeGeometry.coordinates);
-  const pt = point([lng, lat]);
-  const snapped = nearestPointOnLine(line, pt);
-  return snapped.properties.location ?? 0; // km from start
+): { distKm: number; alongKm: number } {
+  const c = routeGeometry.coordinates;
+  if (c.length === 0) return { distKm: Infinity, alongKm: 0 };
+  const cum = cumulativeKm(routeGeometry);
+  const kx = EARTH_RADIUS_KM * RAD * Math.cos(lat * RAD);
+  const ky = EARTH_RADIUS_KM * RAD;
+
+  let ax = (c[0][0] - lng) * kx;
+  let ay = (c[0][1] - lat) * ky;
+  let best = ax * ax + ay * ay;
+  let alongKm = 0;
+  for (let i = 1; i < c.length; i++) {
+    const bx = (c[i][0] - lng) * kx;
+    const by = (c[i][1] - lat) * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const px = ax + t * dx;
+    const py = ay + t * dy;
+    const d2 = px * px + py * py;
+    if (d2 < best) {
+      best = d2;
+      alongKm = cum[i - 1] + t * (cum[i] - cum[i - 1]);
+    }
+    ax = bx;
+    ay = by;
+  }
+  return { distKm: Math.sqrt(best), alongKm };
 }
 
-export function getDistanceToRoute(
-  routeGeometry: GeoJSON.LineString,
-  lat: number,
-  lng: number
-): number {
-  const line = lineString(routeGeometry.coordinates);
-  const pt = point([lng, lat]);
-  const snapped = nearestPointOnLine(line, pt);
-  return snapped.properties.dist ?? Infinity; // km from route
-}
-
-export function getRouteBounds(routeGeometry: GeoJSON.LineString, paddingKm: number) {
-  const line = lineString(routeGeometry.coordinates);
-  const bounds = bbox(buffer(line, paddingKm, { units: 'kilometers' })!);
-  return {
-    south: bounds[1],
-    west: bounds[0],
-    north: bounds[3],
-    east: bounds[2],
-  };
+export function getDistanceAlongRoute(routeGeometry: GeoJSON.LineString, lat: number, lng: number): number {
+  return projectOnRoute(routeGeometry, lat, lng).alongKm; // km from start
 }
 
 /**

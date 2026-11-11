@@ -20,8 +20,8 @@ export function buildUnifiedSupplyQuery(polyline: string, radiusM: number): stri
   return `[out:json][timeout:${OVERPASS_QUERY_TIMEOUT_S}];
 (
   // Shops - branded
-  node["brand:wikidata"="Q2874810"](around:${radiusM},${polyline});
-  node["brand:wikidata"="Q857855"](around:${radiusM},${polyline});
+  node["brand:wikidata"="Q2589061"](around:${radiusM},${polyline});
+  node["brand:wikidata"="Q857182"](around:${radiusM},${polyline});
   // Shops - generic
   node["shop"="supermarket"](around:${radiusM},${polyline});
   way["shop"="supermarket"](around:${radiusM},${polyline});
@@ -113,7 +113,16 @@ export async function queryOverpassWithFailover(
       }
 
       const data = await res.json();
-      const elements: OverpassElement[] = data?.elements ?? [];
+      // Server-side timeouts and out-of-memory arrive as HTTP 200 with a
+      // `remark` and partial or empty elements: treat as a failure so the
+      // next endpoint is tried and nothing partial gets cached.
+      if (typeof data?.remark === 'string' && /error/i.test(data.remark)) {
+        throw new Error(`Overpass: ${data.remark}`);
+      }
+      if (!Array.isArray(data?.elements)) {
+        throw new Error('Overpass: malformed response');
+      }
+      const elements: OverpassElement[] = data.elements;
 
       debugLog.info('overpass', 'query:success', {
         endpoint,

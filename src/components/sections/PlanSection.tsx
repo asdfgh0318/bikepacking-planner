@@ -4,6 +4,7 @@ import { useTripStore } from '../../store/tripStore';
 import { RESUPPLY_PRESETS, autoDetectStrategy } from '../../services/resupplyPlanner';
 import { DIET_PROFILES } from '../../services/diet';
 import { SUPPLY_BADGE_LETTERS, SUPPLY_COLORS } from '../../constants/supplyTypes';
+import { formatClock } from '../../utils/format';
 import { Section, Segmented, Slider, Toggle, Alert, Stat } from '../ui';
 import type { DietType, ResupplyStrategyId } from '../../types';
 
@@ -15,14 +16,11 @@ const STRATEGIES: { value: ResupplyStrategyId; label: string }[] = [
   { value: 'self-sufficient', label: 'Carry' },
 ];
 
-function clock(h: number) {
-  return `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-}
-
 export function PlanSection() {
   const daySegments = useRouteStore((s) => s.daySegments);
   const routeStats = useRouteStore((s) => s.routeStats);
   const supplyPoints = useSupplyStore((s) => s.supplyPoints);
+  const osmFailed = useSupplyStore((s) => s.osmFailed);
   const plan = useTripStore((s) => s.plan);
   const strategyId = useTripStore((s) => s.strategyId);
   const setStrategyId = useTripStore((s) => s.setStrategyId);
@@ -38,8 +36,9 @@ export function PlanSection() {
   if (daySegments.length === 0) return null;
 
   const points = paczkomat ? supplyPoints : supplyPoints.filter((p) => p.type !== 'paczkomat');
-  const auto = strategyId === 'auto' && routeStats ? autoDetectStrategy(points, routeStats.distanceKm) : null;
-  const strategyText = auto
+  // With OpenStreetMap unreachable the shop count is unknown, not zero.
+  const auto = strategyId === 'auto' && routeStats && !osmFailed ? autoDetectStrategy(points, routeStats.distanceKm) : null;
+  const strategyText = strategyId === 'auto' && !auto ? 'Picks a strategy once shops along the route are known.' : auto
     ? `${RESUPPLY_PRESETS[auto.strategyId].label}: ${auto.reason}`
     : RESUPPLY_PRESETS[strategyId].description;
 
@@ -82,7 +81,7 @@ export function PlanSection() {
                 {day.stops.map((s, i) => (
                   <div key={`${s.stopId}-${i}`} className="row stop">
                     <span className="badge" style={{ background: (SUPPLY_COLORS[s.stopType] || SUPPLY_COLORS.shop).bg }}>{s.source === 'paczkomat' ? 'P' : SUPPLY_BADGE_LETTERS[s.stopType] || 'S'}</span>
-                    <span className="grow">{s.stopName}<small> km {s.distanceKm.toFixed(0)} · ~{clock(s.estimatedArrivalHour)} · {s.totalCalories} kcal</small></span>
+                    <span className="grow">{s.stopName}<small> km {s.distanceKm.toFixed(0)} · ~{formatClock(s.estimatedArrivalHour)} · {s.totalCalories} kcal</small></span>
                     {s.isOpenOnArrival === false && <span className="tag tag-bad">closed</span>}
                     {s.isOpenOnArrival === true && <span className="tag tag-good">open</span>}
                   </div>

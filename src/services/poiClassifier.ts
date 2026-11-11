@@ -28,21 +28,60 @@ const BRAND_REGISTRY: Record<string, {
   name: string;
   closedOnNonTradingSunday?: boolean;
 }> = {
-  'Q2874810': { type: 'zabka', name: 'Żabka' },
-  'Q857855': { type: 'biedronka', name: 'Biedronka', closedOnNonTradingSunday: true },
-  'Q111': { type: 'supermarket', name: 'Lidl', closedOnNonTradingSunday: true },
-  'Q685967': { type: 'supermarket', name: 'Auchan', closedOnNonTradingSunday: true },
-  'Q487494': { type: 'supermarket', name: 'Kaufland', closedOnNonTradingSunday: true },
-  'Q2462707': { type: 'supermarket', name: 'Dino', closedOnNonTradingSunday: true },
-  'Q11790298': { type: 'supermarket', name: 'Netto', closedOnNonTradingSunday: true },
-  'Q1543186': { type: 'supermarket', name: 'Lewiatan' }, // franchise — exempt
-  'Q11790849': { type: 'supermarket', name: 'Stokrotka', closedOnNonTradingSunday: true },
+  // IDs are the ones the OSM name-suggestion-index assigns to Polish stores
+  // (checked against Wikidata labels, 2026-11).
+  'Q2589061': { type: 'zabka', name: 'Żabka' }, // franchise: exempt
+  'Q857182': { type: 'biedronka', name: 'Biedronka', closedOnNonTradingSunday: true },
+  'Q151954': { type: 'supermarket', name: 'Lidl', closedOnNonTradingSunday: true },
+  'Q758603': { type: 'supermarket', name: 'Auchan', closedOnNonTradingSunday: true },
+  'Q685967': { type: 'supermarket', name: 'Kaufland', closedOnNonTradingSunday: true },
+  'Q11694239': { type: 'supermarket', name: 'Dino', closedOnNonTradingSunday: true },
+  'Q552652': { type: 'supermarket', name: 'Netto', closedOnNonTradingSunday: true },
+  'Q11755396': { type: 'supermarket', name: 'Lewiatan' }, // franchise: exempt
+  'Q9345945': { type: 'supermarket', name: 'Stokrotka', closedOnNonTradingSunday: true },
+  'Q110801183': { type: 'supermarket', name: 'Stokrotka', closedOnNonTradingSunday: true }, // Stokrotka Market
+  'Q110801045': { type: 'supermarket', name: 'Stokrotka', closedOnNonTradingSunday: true }, // Stokrotka Optima
   'Q11821937': { type: 'supermarket', name: 'Polomarket', closedOnNonTradingSunday: true },
-  'Q7899': { type: 'supermarket', name: 'Carrefour', closedOnNonTradingSunday: true },
-  'Q110079': { type: 'supermarket', name: 'Lidl', closedOnNonTradingSunday: true }, // alternate wikidata ID
-  'Q152096': { type: 'supermarket', name: 'Aldi', closedOnNonTradingSunday: true },
-  'Q316004': { type: 'supermarket', name: 'Intermarché', closedOnNonTradingSunday: true },
+  'Q217599': { type: 'supermarket', name: 'Carrefour', closedOnNonTradingSunday: true },
+  'Q2689639': { type: 'supermarket', name: 'Carrefour', closedOnNonTradingSunday: true }, // Carrefour Market
+  'Q41171373': { type: 'supermarket', name: 'Aldi', closedOnNonTradingSunday: true }, // Aldi Nord (the Polish stores)
+  'Q125054': { type: 'supermarket', name: 'Aldi', closedOnNonTradingSunday: true }, // generic Aldi
+  'Q3153200': { type: 'supermarket', name: 'Intermarché', closedOnNonTradingSunday: true },
+  'Q98278038': { type: 'supermarket', name: 'Intermarché', closedOnNonTradingSunday: true }, // Intermarché Super
 };
+
+/**
+ * Fallback for shops mapped without `brand:wikidata`: recognise the chain
+ * from its `brand` / `name` tag. Maps a name pattern to a registry ID.
+ * Small franchise formats (Carrefour Express, Stokrotka Express) are
+ * deliberately not matched: they are not reliably shut on Sundays.
+ */
+const BRAND_NAME_PATTERNS: Array<[RegExp, string]> = [
+  [/^[żz]abka\b/i, 'Q2589061'],
+  [/^biedronka\b/i, 'Q857182'],
+  [/^lidl\b/i, 'Q151954'],
+  [/^auchan\b/i, 'Q758603'],
+  [/^kaufland\b/i, 'Q685967'],
+  [/^dino\b/i, 'Q11694239'],
+  [/^netto\b/i, 'Q552652'],
+  [/^lewiatan\b/i, 'Q11755396'],
+  [/^stokrotka\b(?!\s+express)/i, 'Q9345945'],
+  [/^polomarket\b/i, 'Q11821937'],
+  [/^carrefour\b(?!\s+express)/i, 'Q217599'],
+  [/^aldi\b/i, 'Q41171373'],
+  [/^intermarch[ée]\b/i, 'Q3153200'],
+];
+
+/** Registry entry for an element, by wikidata ID or (shops only) by name. */
+function findBrand(tags: Record<string, string>): (typeof BRAND_REGISTRY)[string] | undefined {
+  const id = tags['brand:wikidata'];
+  // An ID we do not list (old or sub-brand) still gets the name fallback.
+  if (id && BRAND_REGISTRY[id]) return BRAND_REGISTRY[id];
+  if (!tags.shop) return undefined;
+  const label = (tags.brand || tags.name || '').trim();
+  const hit = BRAND_NAME_PATTERNS.find(([pattern]) => pattern.test(label));
+  return hit && BRAND_REGISTRY[hit[1]];
+}
 
 /**
  * Classification rule: a match predicate + a classify function.
@@ -73,9 +112,9 @@ function extractCommonDetails(tags: Record<string, string>): Partial<NonNullable
 const RULES: ClassificationRule[] = [
   // === BRAND-SPECIFIC SHOPS (highest priority) ===
   {
-    match: (tags) => !!tags['brand:wikidata'] && !!BRAND_REGISTRY[tags['brand:wikidata']],
+    match: (tags) => !!findBrand(tags),
     classify: (tags) => {
-      const brand = BRAND_REGISTRY[tags['brand:wikidata']];
+      const brand = findBrand(tags)!;
       return {
         type: brand.type,
         name: tags.name || brand.name,

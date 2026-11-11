@@ -1,4 +1,4 @@
-import type { DietProfile, DietType, FoodItem, SupplyOrder, SupplyPoint, RouteStats } from '../types';
+import type { DietProfile, DietType, FoodItem } from '../types';
 
 // Calorie coefficients calibrated against bikepacking research:
 // 80km flat day → ~3760 cal, 80km+800m ascent → ~6560 cal
@@ -125,90 +125,4 @@ export function calculateDailyCalories(
     profile.calsPerKm * dailyDistanceKm +
     profile.calsPerAscentM * dailyAscentM
   );
-}
-
-export function generateSupplyOrders(
-  profile: DietProfile,
-  routeStats: RouteStats,
-  supplyPoints: SupplyPoint[],
-  rideDays: number
-): SupplyOrder[] {
-  if (supplyPoints.length === 0 || rideDays < 1) return [];
-
-  const dailyDistKm = routeStats.distanceKm / rideDays;
-  const dailyAscent = routeStats.ascentM / rideDays;
-  const dailyCals = calculateDailyCalories(profile, dailyDistKm, dailyAscent);
-
-  const foods = FOOD_DB[profile.type] || FOOD_DB.standard;
-
-  // Assign each supply point to a day
-  const orders: SupplyOrder[] = [];
-
-  // Pick supply stops: roughly one per day, preferring Paczkomaty for shipped items
-  const kmPerDay = routeStats.distanceKm / rideDays;
-  const selectedStops: Array<{ point: SupplyPoint; day: number }> = [];
-
-  for (let day = 0; day < rideDays; day++) {
-    const dayStartKm = day * kmPerDay;
-    const dayMidKm = dayStartKm + kmPerDay * 0.6; // pick up at 60% of the day
-
-    // Find closest supply point to the mid-day point
-    let best: SupplyPoint | null = null;
-    let bestDist = Infinity;
-
-    for (const sp of supplyPoints) {
-      const dist = Math.abs(sp.distanceFromStartKm - dayMidKm);
-      // Don't reuse a stop already picked
-      if (dist < bestDist && !selectedStops.some((s) => s.point.id === sp.id)) {
-        best = sp;
-        bestDist = dist;
-      }
-    }
-
-    if (best) {
-      selectedStops.push({ point: best, day: day + 1 });
-    }
-  }
-
-  // Generate food lists for each stop
-  for (const { point, day } of selectedStops) {
-    const items: FoodItem[] = [];
-    let totalCals = 0;
-
-    // Fill until we hit daily calorie target
-    // Prioritize items available at this stop type
-    const sortedFoods = [...foods].sort((a, b) => {
-      const shopType = point.type as FoodItem['availableAt'][number];
-      const aAvail = a.availableAt.includes(shopType) ? 0 : 1;
-      const bAvail = b.availableAt.includes(shopType) ? 0 : 1;
-      return aAvail - bAvail;
-    });
-
-    for (const food of sortedFoods) {
-      if (totalCals >= dailyCals) break;
-      items.push(food);
-      totalCals += food.calories;
-    }
-
-    // If still short, add more snacks
-    while (totalCals < dailyCals * 0.9) {
-      const snacks = sortedFoods.filter((f) => f.category === 'snack');
-      if (snacks.length === 0) break;
-      const snack = snacks[items.length % snacks.length];
-      items.push(snack);
-      totalCals += snack.calories;
-    }
-
-    orders.push({
-      stopId: point.id,
-      stopName: point.name,
-      distanceKm: point.distanceFromStartKm,
-      dayNumber: day,
-      items,
-      totalCalories: totalCals,
-      totalWeightG: items.reduce((sum, f) => sum + f.weightG, 0),
-    });
-  }
-
-  return orders;
 }

@@ -152,8 +152,11 @@ describe('generateWaterPlan', () => {
 
     // No refills
     expect(plan.refillCount).toBe(0);
-    // No critical points (no water sources to reference)
-    // But water should drop to 0 at some point
+    // Running dry with no source at all must still raise an alert
+    expect(plan.criticalPoints).toHaveLength(1);
+    expect(plan.criticalPoints[0].nearestSourceName).toBeNull();
+    expect(plan.criticalPoints[0].nearestSourceKm).toBeNull();
+    expect(plan.criticalPoints[0].distanceToSource).toBeNull();
     const endLevel = plan.levelCurve[plan.levelCurve.length - 1];
     expect(endLevel.liters).toBe(0);
     // Total consumption is clamped by available water
@@ -209,5 +212,32 @@ describe('generateWaterPlan', () => {
     expect(day2Start).toBeDefined();
     // The first km of day 2 should have water near capacity minus one km's consumption
     expect(day2Start!.liters).toBeGreaterThan(1.5);
+  });
+
+  it('emits one critical point per dry stretch, not one per km', () => {
+    const segments: DaySegment[] = [
+      makeSegment({ dayNumber: 1, startKm: 0, endKm: 80, estimatedHours: 6 }),
+      makeSegment({ dayNumber: 2, startKm: 80, endKm: 160, estimatedHours: 6 }),
+    ];
+    // 0.5 L/hr * 6 h = 3 L per day against 1 L carried; one refill at km 30
+    const plan = generateWaterPlan(segments, [makeWaterPoint('w', 30, 'Well')], null, 1.0);
+
+    // Day 1: dry before the well, dry again after it. Day 2: one long dry stretch.
+    expect(plan.criticalPoints.map((cp) => cp.dayNumber)).toEqual([1, 1, 2]);
+    expect(plan.criticalPoints[0].km).toBeLessThan(30);
+    expect(plan.criticalPoints[1].km).toBeGreaterThan(30);
+    // far more km than that are spent below the threshold
+    expect(plan.levelCurve.filter((p) => p.liters < 0.3).length).toBeGreaterThan(50);
+  });
+
+  it('does not print a sentinel distance when there is no further source', () => {
+    const segments: DaySegment[] = [
+      makeSegment({ dayNumber: 1, startKm: 0, endKm: 80, estimatedHours: 6 }),
+    ];
+    const plan = generateWaterPlan(segments, [makeWaterPoint('w', 30, 'Well')], null, 2.0);
+
+    expect(plan.recommendations).toHaveLength(1);
+    expect(plan.recommendations[0]).toBe('Fill up at km 30 (Well) — no further water source on the route');
+    expect(plan.recommendations[0]).not.toContain('999');
   });
 });

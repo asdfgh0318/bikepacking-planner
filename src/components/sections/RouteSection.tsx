@@ -81,13 +81,16 @@ export function RouteSection() {
           {isCalculating && <p className="note">Calculating route…</p>}
 
           <ul className="list waypoint-list">
-            {waypoints.map((wp, i) => (
-              <li key={wp.id} className="item waypoint-item">
-                <span className={`dot ${i === 0 ? 'dot-start' : i === waypoints.length - 1 ? 'dot-end' : ''}`} />
-                <span className="grow">{i === 0 ? 'Start' : i === waypoints.length - 1 ? 'End' : `Via ${i}`}<small> {wp.lat.toFixed(3)}, {wp.lng.toFixed(3)}</small></span>
-                <button className="btn-icon" aria-label="Remove waypoint" onClick={() => removeWaypoint(wp.id)}>×</button>
-              </li>
-            ))}
+            {waypoints.map((wp, i) => {
+              const name = i === 0 ? 'Start' : i === waypoints.length - 1 ? 'End' : `Via ${i}`;
+              return (
+                <li key={wp.id} className="item waypoint-item">
+                  <span className={`dot ${i === 0 ? 'dot-start' : i === waypoints.length - 1 ? 'dot-end' : ''}`} />
+                  <span className="grow">{name}<small> {wp.lat.toFixed(3)}, {wp.lng.toFixed(3)}</small></span>
+                  <button className="btn-icon" aria-label={`Remove ${name}`} onClick={() => removeWaypoint(wp.id)}>×</button>
+                </li>
+              );
+            })}
           </ul>
 
           <div className="row wrap">
